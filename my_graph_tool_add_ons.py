@@ -4,6 +4,7 @@ import graph_tool as gt
 import graph_tool.community as gtcom
 import math
 import numpy
+import scipy.sparse
 import my_community_tools as mycomms
 import itertools
 import my_stat_tools as mystats
@@ -37,7 +38,7 @@ def write_graph_to_link_list(G,filename,weight_name = None):
             fid.write(output_line1 + '\n')
             #fid.write(output_line2 + '\n')
 
-def write_graph_to_pajek(G,filename,node_name,weight_name):
+def write_graph_to_pajek(G,filename,node_name = 'label',weight_name = 'co_oc'):
     vertex_lookup = dict()
     i=0
     with open(filename,'w') as fid:
@@ -865,3 +866,32 @@ def get_strength_distribution_by_neighbour_type(G,v,weight_type='co_oc'):
             diff_class_strength += connection_strength
 
     return {'self_strength':self_strength,'same_class_strength':same_class_strength,'diff_class_strength':diff_class_strength}
+
+def get_adjacency_matrix_from_gt_graph(G,weight = 'co_oc'):
+    xs = []
+    ys = []
+    vals = []
+
+    label_lookup = dict()
+
+    for e in G.edges():
+        x = int(e.source())
+        y = int(e.target())
+        v = G.edge_properties[weight][e]
+        labelx = G.vertex_properties['label'][e.source()]
+        labely = G.vertex_properties['label'][e.target()]
+
+        if not label_lookup.has_key(labelx):
+            label_lookup[labelx] = x
+        if not label_lookup.has_key(labely):
+            label_lookup[labely] = y
+
+        xs.append(x)
+        ys.append(y)
+        vals.append(v)
+
+
+    A = scipy.sparse.coo_matrix((vals,(xs,ys)),shape=(G.num_vertices(),G.num_vertices()))
+    A = A.tocsc()
+
+    return A,label_lookup

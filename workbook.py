@@ -13,27 +13,29 @@ import numpy
 import my_stat_tools as mystat
 import my_containers as mycons
 
+G = gt.load_graph('Gclasses_1830.xml.gz')
+A = mygt.get_adjacency_matrix_from_gt_graph(G)
 
-Gclasses_merged = gt.load_graph('Gclasses_1790.xml.gz')
-Gcodes_merged = gt.load_graph('Gcodes_1790.xml.gz')
-for d in range(1800,2020,10):
-    print '*** Processing decade {0}...'.format(d)
-    print '*Creating current graphs...'
-    Gclasses_current,Gcodes_current = PD.load_coocurrence_networks_from_patent_code_file_to_graph_tool('Patents_v2_{0}.csv'.format(d))
-
-    print 'Saving current graphs...'
-    Gclasses_current.save('Gclasses_' + str(d) + '.xml.gz')
-    Gcodes_current.save('Gcodes_' + str(d) + '.xml.gz')
-
-    print '*Merging decade {0} with previous...'.format(d)
-    print 'Classes:'
-    Gclasses_merged = mygt.merge_cooccurrence_networks(Gclasses_merged,Gclasses_current,True,True)
-    print 'Codes:'
-    Gcodes_merged = mygt.merge_cooccurrence_networks(Gcodes_merged,Gcodes_current,True,True)
-
-    print 'Saving merged graphs...'
-    Gclasses_merged.save('Gclasses_{0}to{1}.xml.gz'.format(1790,d))
-    Gcodes_merged.save('Gcodes_{0}to{1}.xml.gz'.format(1790,d))
+#Gclasses_merged = gt.load_graph('Gclasses_1790.xml.gz')
+#Gcodes_merged = gt.load_graph('Gcodes_1790.xml.gz')
+#for d in range(1800,2020,10):
+#    print '*** Processing decade {0}...'.format(d)
+#    print '*Creating current graphs...'
+#    Gclasses_current,Gcodes_current = PD.load_coocurrence_networks_from_patent_code_file_to_graph_tool('Patents_v2_{0}.csv'.format(d))
+#
+#    print 'Saving current graphs...'
+#    Gclasses_current.save('Gclasses_' + str(d) + '.xml.gz')
+#    Gcodes_current.save('Gcodes_' + str(d) + '.xml.gz')
+#
+#    print '*Merging decade {0} with previous...'.format(d)
+#    print 'Classes:'
+#    Gclasses_merged = mygt.merge_cooccurrence_networks(Gclasses_merged,Gclasses_current,True,True)
+#    print 'Codes:'
+#    Gcodes_merged = mygt.merge_cooccurrence_networks(Gcodes_merged,Gcodes_current,True,True)
+#
+#    print 'Saving merged graphs...'
+#    Gclasses_merged.save('Gclasses_{0}to{1}.xml.gz'.format(1790,d))
+#    Gcodes_merged.save('Gcodes_{0}to{1}.xml.gz'.format(1790,d))
 
 #B = PD.get_patent_code_incidence_matrix_from_file('Patents_v2_1790.csv')
 #B.get_correlation_column_elem_age_vs_degree()
