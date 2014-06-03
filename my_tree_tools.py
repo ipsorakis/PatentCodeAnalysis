@@ -21,11 +21,13 @@ class tree:
     def get_node_by_name(self,name):
         return self.node_lookup[name]
 
-    def add_node(self,name,parent = None):
-        if parent is None:
+    def add_node(self,name,parent_object = None):
+        if parent_object is None:
             parent = self.root
-        elif isinstance(parent,str):
-            parent = self.node_lookup[parent]
+        elif isinstance(parent_object,str):
+            parent = self.node_lookup[parent_object]
+        elif isinstance(parent_object,tree_node):
+            parent = parent_object
 
         new_node = tree_node(name,parent)
         parent.children.add(new_node)
@@ -109,10 +111,26 @@ class tree:
         elif isinstance(node_object,str):
             return len(self.node_lookup[node_object].children)
 
+    def get_siblings(self,node_object):
+        if isinstance(node_object,tree_node):
+            focal_node = node_object
+        elif isinstance(node_object,str):
+            focal_node = self.node_lookup[node_object]
+
+        if focal_node.parent is self.root:
+            return []
+        else:
+            siblings = [child for child in focal_node.parent.children if child is not focal_node]
+            return siblings
+
+    def get_sibling_names(self,node_object):
+        siblings = self.get_siblings(node_object)
+        return [sibling.name for sibling in siblings]
+
 # TO IMPLEMENT
 # =============
-# - access to children - DONE
-# - get leaves - DONE
+# - get siblings - DONE
+# - add level information per node
 # - export to nested list
 # - flatten tree given root node
 # - read tree from a nested list
@@ -127,7 +145,7 @@ def parse_Daniel_semicolon_based_tree_format_to_my_tree_class(filename):
     with open(filename,'r') as fp:
         for aline in fp:
             aline = aline.strip()
-            node_names = aline.split(',')
+            node_names = aline.split(':')
 
             n=0
             for node_name in node_names:
@@ -135,11 +153,17 @@ def parse_Daniel_semicolon_based_tree_format_to_my_tree_class(filename):
                     class_name = node_name
                     if not t.has_node_with_name(node_name):
                         current_node = t.add_node(node_name)
+                    else:
+                        current_node = t.get_node_by_name(node_name)
                 else:
-                    node_name = class_name + '/' + node_name
-                    if not t.has_node_with_name(node_name):
-                        current_node = t.add_node(node_name,prev_node)
+                    code_name = class_name + '/' + node_name
+                    if not t.has_node_with_name(code_name):
+                        current_node = t.add_node(code_name,prev_node)
+                    else:
+                        current_node = t.get_node_by_name(code_name)
                 prev_node = current_node
+                n+=1
+    return t
 #---- Infomap
 def convert_infomap_hierarchy_dot_tree_to_tree_string(filename):
     tree_list = convert_infomap_hierarchy_dot_tree_to_tree_list(filename)
