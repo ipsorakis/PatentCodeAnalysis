@@ -7,13 +7,16 @@ class tree_node:
     def __init__(self,name, parent = None):
         self.name = name
         self.parent = parent
-
+        self.children = set()
 
 class tree:
     def __init__(self):
         self.node_lookup = dict()
         self.root = tree_node('ROOT')
         self.node_lookup[self.root.name] = self.root
+
+    def has_node_with_name(self,name):
+        return self.node_lookup.has_key(name)
 
     def get_node_by_name(self,name):
         return self.node_lookup[name]
@@ -24,10 +27,11 @@ class tree:
         elif isinstance(parent,str):
             parent = self.node_lookup[parent]
 
-        n = tree_node(name,parent)
-        self.node_lookup[n.name] = n
+        new_node = tree_node(name,parent)
+        parent.children.add(new_node)
+        self.node_lookup[new_node.name] = new_node
 
-        return n
+        return new_node
 
     def get_parent(self,node_object):
         if isinstance(node_object,tree_node):
@@ -46,8 +50,8 @@ class tree:
         elif isinstance(node_object,tree_node):
             focal_node = node_object
 
-        children = [node_object for node_object in self.node_lookup.values() if node_object.parent is focal_node]
-        return children
+        #children = [node_object for node_object in self.node_lookup.values() if node_object.parent is focal_node]
+        return focal_node.children
 
     def get_children_names(self,node_object):
         children = self.get_children(node_object)
@@ -92,8 +96,51 @@ class tree:
                 break
         return lu+lv
 
+    def get_tree_leaves(self):
+        return [anode for anode in self.node_lookup.values() if len(anode.children)==0]
+
+    def get_tree_leaf_names(self):
+        leaves = self.get_tree_leaves()
+        return [leaf.name for leaf in leaves]
+
+    def get_number_of_children(self,node_object):
+        if isinstance(node_object,tree_node):
+            return len(node_object.children)
+        elif isinstance(node_object,str):
+            return len(self.node_lookup[node_object].children)
+
+# TO IMPLEMENT
+# =============
+# - access to children - DONE
+# - get leaves - DONE
+# - export to nested list
+# - flatten tree given root node
+# - read tree from a nested list
+# - automatic node name generator
+
 
 ######## AD HOC FUNCTIONS
+#--- Daniel's tree output
+def parse_Daniel_semicolon_based_tree_format_to_my_tree_class(filename):
+    t = tree()
+
+    with open(filename,'r') as fp:
+        for aline in fp:
+            aline = aline.strip()
+            node_names = aline.split(',')
+
+            n=0
+            for node_name in node_names:
+                if n==0:
+                    class_name = node_name
+                    if not t.has_node_with_name(node_name):
+                        current_node = t.add_node(node_name)
+                else:
+                    node_name = class_name + '/' + node_name
+                    if not t.has_node_with_name(node_name):
+                        current_node = t.add_node(node_name,prev_node)
+                prev_node = current_node
+#---- Infomap
 def convert_infomap_hierarchy_dot_tree_to_tree_string(filename):
     tree_list = convert_infomap_hierarchy_dot_tree_to_tree_list(filename)
     tree_string = convert_list_to_string_representation(tree_list)
@@ -161,6 +208,8 @@ def parse_infomap_hierarchy_dot_tree_column(X,node_labels):
     if len(current_level) ==1:current_level = current_level[0]
 
     return current_level
+
+######## AUX
 
 def convert_list_to_string_representation(tree_list):
     tree_string = str(tree_list)
