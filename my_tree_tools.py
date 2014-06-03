@@ -15,6 +15,9 @@ class tree:
         self.root = tree_node('ROOT')
         self.node_lookup[self.root.name] = self.root
 
+    def get_total_number_of_nodes(self):
+        return len(self.node_lookup)
+    
     def has_node_with_name(self,name):
         return self.node_lookup.has_key(name)
 
@@ -98,12 +101,16 @@ class tree:
                 break
         return lu+lv
 
-    def get_tree_leaves(self):
+    def get_leaves(self):
         return [anode for anode in self.node_lookup.values() if len(anode.children)==0]
 
-    def get_tree_leaf_names(self):
-        leaves = self.get_tree_leaves()
+    def get_leaf_names(self):
+        leaves = self.get_leaves()
         return [leaf.name for leaf in leaves]
+    
+    def get_number_of_leaves(self):
+        leaves = self.get_leaves()
+        return len(leaves)
 
     def get_number_of_children(self,node_object):
         if isinstance(node_object,tree_node):
@@ -146,7 +153,6 @@ def parse_Daniel_semicolon_based_tree_format_to_my_tree_class(filename):
         for aline in fp:
             aline = aline.strip()
             node_names = aline.split(':')
-
             n=0
             for node_name in node_names:
                 if n==0:
