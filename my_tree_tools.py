@@ -8,16 +8,21 @@ class tree_node:
         self.name = name
         self.parent = parent
         self.children = set()
+        if isinstance(self.parent,tree_node):
+            self.depth = self.parent.depth + 1
+        else:
+            self.depth = -1
 
 class tree:
     def __init__(self):
         self.node_lookup = dict()
         self.root = tree_node('ROOT')
         self.node_lookup[self.root.name] = self.root
+        self.max_depth = -1
 
     def get_total_number_of_nodes(self):
         return len(self.node_lookup)
-    
+
     def has_node_with_name(self,name):
         return self.node_lookup.has_key(name)
 
@@ -34,7 +39,10 @@ class tree:
 
         new_node = tree_node(name,parent)
         parent.children.add(new_node)
+
         self.node_lookup[new_node.name] = new_node
+        if self.max_depth<new_node.depth:
+            self.max_depth = new_node.depth
 
         return new_node
 
@@ -98,8 +106,35 @@ class tree:
             if y in path_v:
                 lu = i+1
                 lv = path_v.index(y)+1
-                break
-        return lu+lv
+                return lu+lv
+
+
+    def get_first_common_ancestor(self,node_object_u,node_object_v):
+      if isinstance(node_object_u,str):
+            u = self.node_lookup[node_object_u]
+      elif isinstance(node_object_u,tree_node):
+          u = node_object_u
+
+      if isinstance(node_object_v,str):
+          v = self.node_lookup[node_object_v]
+      elif isinstance(node_object_v,tree_node):
+          v = node_object_v
+
+      path_u = self.get_path_to_root_as_node_names(u)
+      path_v = self.get_path_to_root_as_node_names(v)
+
+      for ancestor_name in path_u:
+          if ancestor_name in path_v:
+              ancestor_node = self.node_lookup[ancestor_name]
+              return ancestor_node
+
+    def get_first_common_ancestor_name(self,node_object_u,node_object_v):
+        ancestor_node = self.get_first_common_ancestor(node_object_u,node_object_v)
+        return ancestor_node.name
+
+    def get_first_common_ancestor_depth(self,node_object_u,node_object_v):
+        ancestor_node = self.get_first_common_ancestor(node_object_u,node_object_v)
+        return ancestor_node.depth
 
     def get_leaves(self):
         return [anode for anode in self.node_lookup.values() if len(anode.children)==0]
@@ -136,8 +171,9 @@ class tree:
 
 # TO IMPLEMENT
 # =============
-# - get siblings - DONE
-# - add level information per node
+# - similarity by depth of first common ancestor - DONE
+# - add level information per node - DONE
+
 # - export to nested list
 # - flatten tree given root node
 # - read tree from a nested list
