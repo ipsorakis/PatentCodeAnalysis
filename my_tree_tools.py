@@ -11,14 +11,27 @@ class tree_node:
         if isinstance(self.parent,tree_node):
             self.depth = self.parent.depth + 1
         else:
-            self.depth = -1
+            self.depth = 0
 
 class tree:
-    def __init__(self):
+    def __init__(self,root_object = None):
         self.node_lookup = dict()
-        self.root = tree_node('ROOT')
+        if root_object is None:
+            self.root = tree_node('ROOT')
+        elif isinstance(root_object,str):
+            self.root = tree_node(root_object)
+        elif isinstance(root_object,tree_node):
+            self.root = root_object
         self.node_lookup[self.root.name] = self.root
-        self.max_depth = -1
+        self.max_depth = 0
+    
+    def format_input_node_object_to_tree_node(self,node_object,None_option = None):
+        if isinstance(node_object,str):
+            return self.node_lookup[node_object]
+        elif isinstance(node_object,tree_node):
+            return node_object
+        elif node_object is None:
+            return None_option
 
     def get_total_number_of_nodes(self):
         return len(self.node_lookup)
@@ -28,14 +41,13 @@ class tree:
 
     def get_node_by_name(self,name):
         return self.node_lookup[name]
+    
+    def get_depth_of_node(self,node_object):
+        u = self.format_input_node_object_to_tree_node(node_object)
+        return u.depth
 
     def add_node(self,name,parent_object = None):
-        if parent_object is None:
-            parent = self.root
-        elif isinstance(parent_object,str):
-            parent = self.node_lookup[parent_object]
-        elif isinstance(parent_object,tree_node):
-            parent = parent_object
+        parent = self.format_input_node_object_to_tree_node(parent_object,self.root)
 
         new_node = tree_node(name,parent)
         parent.children.add(new_node)
@@ -58,12 +70,7 @@ class tree:
         return parent.name
 
     def get_children(self,node_object):
-        if isinstance(node_object,str):
-            focal_node = self.node_lookup[node_object]
-        elif isinstance(node_object,tree_node):
-            focal_node = node_object
-
-        #children = [node_object for node_object in self.node_lookup.values() if node_object.parent is focal_node]
+        focal_node = self.format_input_node_object_to_tree_node(node_object)
         return focal_node.children
 
     def get_children_names(self,node_object):
@@ -71,12 +78,11 @@ class tree:
         return [child.name for child in children]
 
     def get_path_to_root(self,node_object):
-        if isinstance(node_object,str):
-            u = self.node_lookup[node_object]
-        elif isinstance(node_object,tree_node):
-            u = node_object
+        u = self.format_input_node_object_to_tree_node(node_object)
 
-        path = []
+        path = list()
+        # by default includes self
+        path.append(u)
         current_parent = u.parent
         while current_parent is not None:
             path.append(current_parent)
@@ -87,16 +93,31 @@ class tree:
         path_to_root = self.get_path_to_root(u)
         return [check_point.name for check_point in path_to_root]
 
-    def get_tree_distance(self,node_object_u,node_object_v):
-        if isinstance(node_object_u,str):
-            u = self.node_lookup[node_object_u]
-        elif isinstance(node_object_u,tree_node):
-            u = node_object_u
+    def get_path_from_to(self,node_object_u,node_object_v):
+        u = self.format_input_node_object_to_tree_node(node_object_u)
+        v = self.format_input_node_object_to_tree_node(node_object_v)
 
-        if isinstance(node_object_v,str):
-            v = self.node_lookup[node_object_v]
-        elif isinstance(node_object_v,tree_node):
-            v = node_object_v
+        path_u = self.get_path_to_root(u)
+        path_v = self.get_path_to_root(v)
+
+        path_u_names = [n.name for n in path_u]
+        path_v_names = [n.name for n in path_v]
+
+        i=0
+        for y in path_u_names:
+            if y in path_v_names:
+                lu = i+1
+                lv = path_v_names.index(y)+1
+
+                path_to_common_ancestor_u = path_u[0:lu]
+                path_to_common_ancestor_v = path_v[0:lv]
+
+                return path_to_common_ancestor_u[0:-1] + path_to_common_ancestor_v[::-1]
+            i+=1
+
+    def get_path_from_to_as_node_names(self,node_object_u,node_object_v):
+        u = self.format_input_node_object_to_tree_node(node_object_u)
+        v = self.format_input_node_object_to_tree_node(node_object_v)
 
         path_u = self.get_path_to_root_as_node_names(u)
         path_v = self.get_path_to_root_as_node_names(v)
@@ -106,27 +127,46 @@ class tree:
             if y in path_v:
                 lu = i+1
                 lv = path_v.index(y)+1
-                return lu+lv
 
+                path_to_common_ancestor_u = path_u[0:lu]
+                path_to_common_ancestor_v = path_v[0:lv]
+
+                return path_to_common_ancestor_u[0:-1] + path_to_common_ancestor_v[::-1]
+            i+=1
+
+    def get_leaf_to_leaf_distance(self,node_object_u,node_object_v):
+        u = self.format_input_node_object_to_tree_node(node_object_u)
+        v = self.format_input_node_object_to_tree_node(node_object_v)
+
+        common_ancestor_depth = self.get_first_common_ancestor_depth(u,v)
+        return u.depth + v.depth - 2*common_ancestor_depth
+
+    def get_leaf_to_leaf_distance_exp_weighted(self,node_object_u,node_object_v,alpha=1,beta=1):
+        u = self.format_input_node_object_to_tree_node(node_object_u)
+        v = self.format_input_node_object_to_tree_node(node_object_v)
+
+        #common_ancestor_depth = self.get_first_common_ancestor_depth(u,v)
+        #u_depths = range(u.depth,common_ancestor_depth-1,-1)
+        #v_depths = range(v.depth,common_ancestor_depth-1,-1)
+        #
+
+        path_u_v = self.get_path_from_to(u,v)
+        depth_path = [node.depth for node in path_u_v]
+        weighted_distances = [numpy.exp(-(alpha/beta) *d) for d in depth_path[1:-1]]
+
+        return sum(weighted_distances)
 
     def get_first_common_ancestor(self,node_object_u,node_object_v):
-      if isinstance(node_object_u,str):
-            u = self.node_lookup[node_object_u]
-      elif isinstance(node_object_u,tree_node):
-          u = node_object_u
+        u = self.format_input_node_object_to_tree_node(node_object_u)
+        v = self.format_input_node_object_to_tree_node(node_object_v)
 
-      if isinstance(node_object_v,str):
-          v = self.node_lookup[node_object_v]
-      elif isinstance(node_object_v,tree_node):
-          v = node_object_v
+        path_u = self.get_path_to_root_as_node_names(u)
+        path_v = self.get_path_to_root_as_node_names(v)
 
-      path_u = self.get_path_to_root_as_node_names(u)
-      path_v = self.get_path_to_root_as_node_names(v)
-
-      for ancestor_name in path_u:
-          if ancestor_name in path_v:
-              ancestor_node = self.node_lookup[ancestor_name]
-              return ancestor_node
+        for ancestor_name in path_u:
+            if ancestor_name in path_v:
+                ancestor_node = self.node_lookup[ancestor_name]
+                return ancestor_node
 
     def get_first_common_ancestor_name(self,node_object_u,node_object_v):
         ancestor_node = self.get_first_common_ancestor(node_object_u,node_object_v)
@@ -148,16 +188,11 @@ class tree:
         return len(leaves)
 
     def get_number_of_children(self,node_object):
-        if isinstance(node_object,tree_node):
-            return len(node_object.children)
-        elif isinstance(node_object,str):
-            return len(self.node_lookup[node_object].children)
+        focal_node = self.format_input_node_object_to_tree_node(node_object)
+        return focal_node.children
 
     def get_siblings(self,node_object):
-        if isinstance(node_object,tree_node):
-            focal_node = node_object
-        elif isinstance(node_object,str):
-            focal_node = self.node_lookup[node_object]
+        focal_node = self.format_input_node_object_to_tree_node(node_object)
 
         if focal_node.parent is self.root:
             return []
@@ -171,8 +206,14 @@ class tree:
 
 # TO IMPLEMENT
 # =============
-# - similarity by depth of first common ancestor - DONE
-# - add level information per node - DONE
+# - CHANGE ROOT LEVEL TO 0 from -1 - DONE
+# - DROPPED DUMMY ROOT - DONE
+# - RE-WRITE TREE DISTANCE BASED ON DEPTH - DONE
+# - FUNCTION: FIND PATH FROM U TO V - DONE
+# - PATHS INCLUDE SELF - DONE
+# - add get depth given name - DONE
+# - added function to format input node_object to tree_node - DONE
+# - get_distance changed to get_leaf_to_leaf_distance - DONE
 
 # - export to nested list
 # - flatten tree given root node
