@@ -9,9 +9,9 @@ class tree_node:
         self.parent = parent
         self.children = set()
         if isinstance(self.parent,tree_node):
-            self.depth = self.parent.depth + 1
+            self.level = self.parent.level + 1
         else:
-            self.depth = 0
+            self.level = 0
 
 class tree:
     def __init__(self,root_object = None):
@@ -42,21 +42,34 @@ class tree:
     def get_node_by_name(self,name):
         return self.node_lookup[name]
     
-    def get_depth_of_node(self,node_object):
+    def get_node_level(self,node_object):
         u = self.format_input_node_object_to_tree_node(node_object)
-        return u.depth
+        return u.level
 
     def add_node(self,name,parent_object = None):
-        parent = self.format_input_node_object_to_tree_node(parent_object,self.root)
+        parent = self.format_input_node_object_to_tree_node(parent_object)
 
         new_node = tree_node(name,parent)
-        parent.children.add(new_node)
+        if parent is not None:
+            parent.children.add(new_node)
 
         self.node_lookup[new_node.name] = new_node
-        if self.max_depth<new_node.depth:
-            self.max_depth = new_node.depth
+        if self.max_depth<new_node.level:
+            self.max_depth = new_node.level
 
         return new_node
+
+    def update_parent_of_node(self,node_object,parent_object=None):
+        node = self.format_input_node_object_to_tree_node(node_object)
+        new_parent = self.format_input_node_object_to_tree_node(parent_object)
+
+        old_parent = node.parent
+        if old_parent is not None:
+            old_parent.children.remove(node)
+
+        node.parent = new_parent
+        new_parent.children.add(node)
+        # maybe update
 
     def get_parent(self,node_object):
         if isinstance(node_object,tree_node):
@@ -138,20 +151,15 @@ class tree:
         u = self.format_input_node_object_to_tree_node(node_object_u)
         v = self.format_input_node_object_to_tree_node(node_object_v)
 
-        common_ancestor_depth = self.get_first_common_ancestor_depth(u,v)
-        return u.depth + v.depth - 2*common_ancestor_depth
+        common_ancestor_level = self.get_first_common_ancestor_level(u,v)
+        return u.level + v.level - 2*common_ancestor_level
 
     def get_leaf_to_leaf_distance_exp_weighted(self,node_object_u,node_object_v,alpha=1,beta=1):
         u = self.format_input_node_object_to_tree_node(node_object_u)
         v = self.format_input_node_object_to_tree_node(node_object_v)
 
-        #common_ancestor_depth = self.get_first_common_ancestor_depth(u,v)
-        #u_depths = range(u.depth,common_ancestor_depth-1,-1)
-        #v_depths = range(v.depth,common_ancestor_depth-1,-1)
-        #
-
         path_u_v = self.get_path_from_to(u,v)
-        depth_path = [node.depth for node in path_u_v]
+        depth_path = [node.level for node in path_u_v]
         weighted_distances = [numpy.exp(-(alpha/beta) *d) for d in depth_path[1:-1]]
 
         return sum(weighted_distances)
@@ -172,9 +180,9 @@ class tree:
         ancestor_node = self.get_first_common_ancestor(node_object_u,node_object_v)
         return ancestor_node.name
 
-    def get_first_common_ancestor_depth(self,node_object_u,node_object_v):
+    def get_first_common_ancestor_level(self,node_object_u,node_object_v):
         ancestor_node = self.get_first_common_ancestor(node_object_u,node_object_v)
-        return ancestor_node.depth
+        return ancestor_node.level
 
     def get_leaves(self):
         return [anode for anode in self.node_lookup.values() if len(anode.children)==0]
@@ -204,17 +212,57 @@ class tree:
         siblings = self.get_siblings(node_object)
         return [sibling.name for sibling in siblings]
 
+    def get_orphans(self):
+        orphans = [anode for anode in self.node_lookup.values() if anode.parent is None]
+        return orphans
+
+    def get_orphan_names(self):
+        orphans = self.get_orphans()
+        orphan_names = [an_orphan.name for an_orphan in orphans]
+        return orphan_names
+
+    def calculate_node_level(self,node_object):
+        focal_node = self.format_input_node_object_to_tree_node(node_object)
+
+        if focal_node.parent is not None:
+            level = 1 + self.calculate_node_level(focal_node.parent)
+        else:
+            level = 0
+
+        focal_node.level = level
+        return level
+
+    def recalculate_all_node_levels(self):
+        leaves = self.get_leaves()
+
+        is_updated = dict()
+        for leaf in leaves:
+            is_updated[leaf.name] = False
+
+        for leaf in leaves:
+            if not is_updated[leaf.name]:
+                leaf.level = self.calculate_node_level(leaf)
+                is_updated[leaf.name] = True
+
+                siblings = self.get_siblings(leaf)
+                for asibling in siblings:
+                    asibling.level = leaf.level
+                    is_updated[asibling.name] = True
+
 # TO IMPLEMENT
 # =============
-# - CHANGE ROOT LEVEL TO 0 from -1 - DONE
-# - DROPPED DUMMY ROOT - DONE
-# - RE-WRITE TREE DISTANCE BASED ON DEPTH - DONE
-# - FUNCTION: FIND PATH FROM U TO V - DONE
-# - PATHS INCLUDE SELF - DONE
-# - add get depth given name - DONE
-# - added function to format input node_object to tree_node - DONE
-# - get_distance changed to get_leaf_to_leaf_distance - DONE
+# - Wrote function to read Debbie data - DONE
+# - Replace depth => level - DONE
+# - Replace default parent option to None - DONE
+# - Get tree roots - DONE (function called orphans)
+# - update parent of node - DONE
+# - Calculate the level of a node - DONE
+# - Update all node levels - DONE
 
+# - Examine possible code mismatches?
+# - USPTO specific: save class depth
+# - get subtree given node
+# - export to : file (depth first)
 # - export to nested list
 # - flatten tree given root node
 # - read tree from a nested list
@@ -222,6 +270,62 @@ class tree:
 
 
 ######## AD HOC FUNCTIONS
+#--- Debbie's tree output
+def parse_Debbie_csv_based_tree_format_to_my_tree_class(filename):
+    t = tree()
+
+    # CLASS INDEX = 0
+    # CURRENT_CODE = 1
+    # PARENT_CODE_OF_CURRENT_CODE = 2
+    # DESCRIPTION
+
+    with open(filename,'r') as fp:
+        for aline in fp:
+            aline = aline.strip()
+
+            elems = aline.split(',')
+
+            current_class = elems[0]
+            current_node = current_class + '/' + elems[1]
+            parent_of_current = current_class + '/' + elems[2]
+            description = elems[3]
+
+            # check if current class exists in the tree if not, add it to root
+            if not t.has_node_with_name(current_class):
+                class_node = t.add_node(current_class,t.root)
+            else:
+                class_node = t.get_node_by_name(current_class)
+
+            # check if the description contains ****** if so, skip
+            if '******' in description:
+                continue
+
+            # check if current node is 000000 if so, skip
+            if current_node == (current_class + '/' + '000000') or current_node == (current_class + '/' + ''):
+                continue
+
+            # check if parent code is <empty> or 000000 if so, set parent to current class
+            if parent_of_current == (current_class + '/' + '000000') or parent_of_current==(current_class + '/' + ''):
+                parent_node = class_node
+            # otherwise, check if parent code exists
+            elif t.has_node_with_name(parent_of_current):
+                # if so, grab the object
+                parent_node = t.get_node_by_name(parent_of_current)
+            # otherwise, create the node with current class as parent.
+            else:
+                parent_node = t.add_node(parent_of_current,class_node)
+
+            # check if the current node has already been added to the network
+            if t.has_node_with_name(current_node):
+            # if so, update the parent with current
+                t.update_parent_of_node(current_node,parent_node)
+            else:
+            # if not, add as normal
+                t.add_node(current_node,parent_node)
+
+    t.recalculate_all_node_levels()
+    return t
+
 #--- Daniel's tree output
 def parse_Daniel_semicolon_based_tree_format_to_my_tree_class(filename):
     t = tree()
