@@ -267,11 +267,58 @@ class tree:
                 depth = anode.level
         return depth
 
+    def get_number_of_levels_below_node(self,node_object):
+        focal_node = self.format_input_node_object_to_tree_node(node_object)
+
+        if len(focal_node.children)==0:
+            return 0
+        else:
+            descendants = self.depth_first_search(focal_node)
+            max_level = max([node.level for node in descendants])
+            return max_level - focal_node.level
+
+    def depth_first_search(self,start_node_object):
+
+        def DFS(jump_node,container):
+            container.append(jump_node)
+            if len(jump_node.children)>0:
+                for c in jump_node.children:
+                    DFS(c,container)
+            return container
+
+        start_node = self.format_input_node_object_to_tree_node(start_node_object)
+        nodes_traversed = DFS(start_node,[])
+
+        return nodes_traversed
+
+    def are_ancestor_descendant_pair(self,node_object1,node_object2):
+        node1 = self.format_input_node_object_to_tree_node(node_object1)
+        node2 = self.format_input_node_object_to_tree_node(node_object2)
+
+        if node1.level>node2.level:
+            new_node = node1
+            old_node = node2
+        elif node1.level<node2.level:
+            new_node = node2
+            old_node = node1
+        else:
+            return False
+
+        parent_node = new_node.parent
+        while parent_node is not None:
+            if parent_node == old_node:
+                return True
+            parent_node = parent_node.parent
+
+        return False
+
+
+
 # TO IMPLEMENT
 # =============
-# - Get branching factor - DONE
-# - Get branching factor statistics - DONE
-# - Get maximum tree depth - DONE
+# - Find depth below node - DONE
+# - Do depth first search - DONE
+# - is_ancestor function - DONE
 
 # - Store basic tree characteristics and update them only if there is any insertion/deletion
 # - Examine possible code mismatches?
