@@ -4,6 +4,7 @@ import graph_tool as gt
 import my_graph_tool_add_ons as mygt
 import my_community_tools as mycomms
 import numpy
+import scipy
 import cPickle as cpickle
 import my_containers as mycons
 import scipy.sparse as sparse
@@ -1299,7 +1300,8 @@ def get_patent_code_incidence_matrix_from_file(filename,use_codes=True):
 
     K = use_codes*total_codes + (not use_codes)*total_classes
     #sparse.coo_matrix((numpy.ones(COOarray.shape[0]),(COOarray[:,0],COOarray[:,1])),(total_patents,K))
-    INCIDENCE_MATRIX = mycons.TechnologyMatrix(COOarray[:,0],COOarray[:,1],total_patents,K,col_elem_labels=tech_lookup)
+    B = scipy.sparse.coo_matrix(COOarray[:,0],COOarray[:,1],total_patents,K)
+    INCIDENCE_MATRIX = mycons.TechnologyMatrix(B,col_elem_labels=tech_lookup)
 
     return INCIDENCE_MATRIX
     #return AdjList,tech_lookup
@@ -1393,7 +1395,8 @@ def get_patent_code_incidence_matrix_from_multiple_files(base_filename,decade_ra
 
     K = use_codes*total_codes + (not use_codes)*total_classes
     #sparse.coo_matrix((numpy.ones(COOarray.shape[0]),(COOarray[:,0],COOarray[:,1])),(total_patents,K))
-    INCIDENCE_MATRIX = mycons.TechnologyMatrix(COOarray[:,0],COOarray[:,1],total_patents,K,col_elem_labels=tech_lookup)
+    B = scipy.sparse.coo_matrix(COOarray[:,0],COOarray[:,1],total_patents,K)
+    INCIDENCE_MATRIX = mycons.TechnologyMatrix(B,col_elem_labels=tech_lookup)
 
     return INCIDENCE_MATRIX
     #return AdjList,tech_lookup

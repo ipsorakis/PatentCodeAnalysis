@@ -7,11 +7,14 @@ import matplotlib.pylab as pylab
 import my_graph_tool_add_ons as mygt
 import graph_tool as gt
 
+# TASKS:
+# -change constructor to take only incidence matrix
+# -if coordinates provided, sparse matrix is built by a separate, static method
+
+
 class IncidenceMatrix:
-    def __init__(self,x,y,num_rows,num_cols,data = None,row_elem_labels = None,col_elem_labels = None):
-        if data is None:
-            data =  numpy.ones(len(x))
-        self.B = scipy.sparse.coo_matrix((data,(x,y)),shape=(num_rows,num_cols))
+    def __init__(self,B,row_elem_labels = None,col_elem_labels = None):
+        self.B = B
         self.row_elem_labels = row_elem_labels
         self.col_elem_labels = col_elem_labels
 
@@ -74,6 +77,12 @@ class IncidenceMatrix:
     def spy(self):
         pylab.spy(self.B)
         pylab.show()
+
+    @staticmethod
+    def build_sparse_matrix_from_coordinate_data(x,y,num_rows,num_cols,data = None):
+        if data is None:
+            data =  numpy.ones(len(x))
+        return scipy.sparse.coo_matrix((data,(x,y)),shape=(num_rows,num_cols))
 
 class TechnologyMatrix(IncidenceMatrix):
 
