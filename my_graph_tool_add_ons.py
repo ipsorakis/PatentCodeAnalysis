@@ -819,7 +819,7 @@ def get_strength_entropy_property_map(G,weight = 'co_oc'):
             for e in v.out_neighbours():
                 strengths.append(G.edge_properties[weight][e])
             strengths = numpy.array(strengths)
-            strengths = strengths / (1.*strengths.sum())
+            strengths /= 1.*strengths.sum()
             vmap[v] = mystats.get_normalised_entropy(strengths)
     return vmap
 
@@ -895,3 +895,14 @@ def get_adjacency_matrix_from_gt_graph(G,weight = 'co_oc'):
     A = A.tocsc()
 
     return A,label_lookup
+
+def get_filter_given_node_name_list(G,vertex_list):
+    vmap = G.new_vertex_property('bool')
+    for v_name in vertex_list:
+        try:
+            v_index = G.graph_properties['index_of'][v_name]
+            v = G.vertex(v_index)
+            vmap[v] = True
+        except KeyError:
+            continue
+    return vmap

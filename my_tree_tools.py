@@ -154,7 +154,7 @@ class tree:
         common_ancestor_level = self.get_first_common_ancestor_level(u,v)
         return u.level + v.level - 2*common_ancestor_level
 
-    def get_leaf_to_leaf_distance_exp_weighted(self,node_object_u,node_object_v,alpha=1,beta=1):
+    def get_leaf_to_leaf_distance_exp_weighted(self,node_object_u,node_object_v,alpha=1.,beta=1.):
         u = self.format_input_node_object_to_tree_node(node_object_u)
         v = self.format_input_node_object_to_tree_node(node_object_v)
 
@@ -249,16 +249,31 @@ class tree:
                     asibling.level = leaf.level
                     is_updated[asibling.name] = True
 
+    def get_all_number_of_children_values(self, at_level = None, ignore_leaves = True):
+        return numpy.array([len(anode.children) for anode in self.node_lookup.values() if ((at_level is not None and anode.level==at_level) or at_level is None) and ((ignore_leaves and len(anode.children)!=0) or not ignore_leaves)])
+
+    def get_branching_factor_distribution(self,at_level = None,ignore_leaves = True):
+        children_values = self.get_all_number_of_children_values(at_level,ignore_leaves)
+        return numpy.histogram(children_values,bins=(numpy.max(children_values) - numpy.min(children_values + 1)))
+
+    def get_average_branching_factor(self,at_level = None,ignore_leaves = True):
+        children_values = self.get_all_number_of_children_values(at_level,ignore_leaves)
+        return numpy.mean(children_values)
+
+    def get_tree_depth(self):
+        depth = 0
+        for anode in self.node_lookup.values():
+            if anode.level>depth:
+                depth = anode.level
+        return depth
+
 # TO IMPLEMENT
 # =============
-# - Wrote function to read Debbie data - DONE
-# - Replace depth => level - DONE
-# - Replace default parent option to None - DONE
-# - Get tree roots - DONE (function called orphans)
-# - update parent of node - DONE
-# - Calculate the level of a node - DONE
-# - Update all node levels - DONE
+# - Get branching factor - DONE
+# - Get branching factor statistics - DONE
+# - Get maximum tree depth - DONE
 
+# - Store basic tree characteristics and update them only if there is any insertion/deletion
 # - Examine possible code mismatches?
 # - USPTO specific: save class depth
 # - get subtree given node

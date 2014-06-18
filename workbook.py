@@ -13,8 +13,21 @@ import numpy
 import my_stat_tools as mystat
 import my_containers as mycons
 
-G = gt.load_graph('Gclasses_1830.xml.gz')
-A = mygt.get_adjacency_matrix_from_gt_graph(G)
+t = mytree.tree('c')
+t.add_node('d','c')
+t.add_node('g','d')
+t.add_node('h','d')
+t.add_node('b','c')
+t.add_node('i','b')
+t.add_node('a','b')
+t.add_node('e','a')
+t.add_node('f','a')
+t.get_path_from_to_as_node_names('g','b')
+
+#t = mytree.parse_Daniel_semicolon_based_tree_format_to_my_tree_class('tree_data/daniel_sample.txt')
+
+#G = gt.load_graph('Gclasses_1830.xml.gz')
+#A = mygt.get_adjacency_matrix_from_gt_graph(G)
 
 #Gclasses_merged = gt.load_graph('Gclasses_1790.xml.gz')
 #Gcodes_merged = gt.load_graph('Gcodes_1790.xml.gz')
