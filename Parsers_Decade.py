@@ -10,6 +10,7 @@ import my_containers as mycons
 import scipy.sparse as sparse
 import my_stat_tools as mystat
 import pandas
+import re
 
 def split_Patent_Codes_to_decades(filename = 'PatentCodes.csv', decade_range = range(1790,2020,10), Patents = None, last_read_line = 1):
     print 'opening Patents lookup table...'
@@ -1555,3 +1556,39 @@ def get_class_combination_ratios(class_list,method='No_of_patents',decade_range=
                 Vals[i].append(CRs[c][i])
 
     return Vals
+
+def convert_code_from_Debbie_to_USPTO_daniel(given_code):
+    abnormal_map = {'340/310110': '340/FOR465',
+                    '340/310120': '340/FOR466',
+                    '340/310130': '340/FOR467',
+                    '340/310140': '340/FOR468',
+                    '340/310150': '340/FOR469',
+                    '340/310160': '340/FOR470',
+                    '340/310170': '340/FOR471',
+                    '340/310180': '340/FOR472'}
+
+    tkns = given_code.split('/')
+    cls = tkns[0]
+    subcls = tkns[1]
+
+    m = re.match(r'\d{3}\d[A-z]0', subcls)
+    if m is not None:
+        subcls = '%s%s0%s' % (m.group(0)[:3], m.group(0)[3], m.group(0)[4])
+    else:
+        m = re.match(r'\d{3}[A-z]00', subcls)
+        if m is not None:
+            subcls = '%s00%s' % (m.group(0)[:3], m.group(0)[3])
+        else:
+            m = re.match(r'\d{3}[A-z]{2}0', subcls)
+            if m is not None:
+                subcls = '%s0%s'  % (m.group(0)[:3], m.group(0)[3:5])
+            else:
+                m = re.match(r'0[A-z]\d\w{3}', subcls)
+                if m is not None:
+                    subcls = '%s0%s' % (m.group(0)[1], m.group(0)[2:])
+
+    code   = cls + '/' + subcls
+    if code in abnormal_map:
+        code = abnormal_map[code]
+
+    return code
