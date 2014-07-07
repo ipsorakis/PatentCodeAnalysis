@@ -2,6 +2,7 @@ __author__ = 'yannis'
 
 
 import numpy
+import cPickle as pickle
 
 class tree_node:
     def __init__(self,name, parent = None):
@@ -14,7 +15,7 @@ class tree_node:
             self.level = 0
 
 class tree:
-    def __init__(self,root_object = None):
+    def __init__(self,root_object = None,node_lookup = None, max_depth = 0):
         self.node_lookup = dict()
         if root_object is None:
             self.root = tree_node('ROOT')
@@ -22,8 +23,13 @@ class tree:
             self.root = tree_node(root_object)
         elif isinstance(root_object,tree_node):
             self.root = root_object
-        self.node_lookup[self.root.name] = self.root
-        self.max_depth = 0
+
+        if node_lookup is None:
+            self.node_lookup[self.root.name] = self.root
+        else:
+            self.node_lookup = node_lookup
+
+        self.max_depth = max_depth
     
     def format_input_node_object_to_tree_node(self,node_object,None_option = None):
         if isinstance(node_object,str):
@@ -146,6 +152,12 @@ class tree:
 
                 return path_to_common_ancestor_u[0:-1] + path_to_common_ancestor_v[::-1]
             i+=1
+
+    def get_node_to_node_distance(self,node_object_u,node_object_v):
+        return self.get_leaf_to_leaf_distance(node_object_u,node_object_v)
+
+    def get_node_to_node_distance_exp_weighted(self,node_object_u,node_object_v,alpha=1.,beta=1.):
+        return self.get_leaf_to_leaf_distance_exp_weighted(node_object_u,node_object_v,alpha,beta)
 
     def get_leaf_to_leaf_distance(self,node_object_u,node_object_v):
         u = self.format_input_node_object_to_tree_node(node_object_u)
@@ -316,9 +328,9 @@ class tree:
 
 # TO IMPLEMENT
 # =============
-# - Find depth below node - DONE
-# - Do depth first search - DONE
-# - is_ancestor function - DONE
+# - Open tree from old version of tree class - extended constructor - DONE
+# - Open tree from old version of tree class - external function - DONE
+# - Added wrapper node_to_node around leaf_to_leaf so that it is more generalised - DONE
 
 # - Store basic tree characteristics and update them only if there is any insertion/deletion
 # - Examine possible code mismatches?
@@ -332,6 +344,11 @@ class tree:
 
 
 ######## AD HOC FUNCTIONS
+#
+def read_old_tree_version_to_current_version(filename):
+    old_t = pickle.load(open(filename,'rb'))
+    return tree(old_t.root,old_t.node_lookup,old_t.max_depth)
+
 #--- Debbie's tree output
 def parse_Debbie_csv_based_tree_format_to_my_tree_class(filename):
     t = tree()
