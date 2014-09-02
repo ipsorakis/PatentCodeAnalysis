@@ -11,6 +11,7 @@ import scipy.sparse as sparse
 import my_stat_tools as mystat
 import pandas
 import re
+import BOMP
 
 def split_Patent_Codes_to_decades(filename = 'PatentCodes.csv', decade_range = range(1790,2020,10), Patents = None, last_read_line = 1):
     print 'opening Patents lookup table...'
@@ -1592,3 +1593,129 @@ def convert_code_from_Debbie_to_USPTO_daniel(given_code):
         code = abnormal_map[code]
 
     return code
+
+def count_patents_where_a_two_class_pools_cooccur(class_list_A,class_list_B,datafile):
+    def close_patent_batch():
+            exists_in_A = False
+            exists_in_B = False
+
+            # iterate classes of patent
+            for aclass_label in current_classes:
+                # check if class is in class_list_A
+                exists_in_A += aclass_label in class_list_A
+                # check if class is in class_list_B
+                exists_in_B += aclass_label in class_list_B
+                # stop if both found
+                if exists_in_A and exists_in_B:break
+
+            return exists_in_A and exists_in_B
+
+    NUMBER_OF_RELEVANT_PATENTS = 0
+    total_patents = 0
+    #datafile = file_header + str(decade) + file_tail
+    print 'opening ' + datafile + '...'
+    with open(datafile,'r') as fid:
+
+        previous_patent = 'N/A'
+        current_classes = set()
+        current_codes = set()
+
+        #print 'reading contents...'
+        curr_line = 0
+        for aline in fid:
+
+            curr_line +=1
+            if curr_line == 1:
+                continue
+
+            aline = aline.strip()
+            entry = aline.split(',')
+
+            patentID = entry[0] + entry[1]
+            current_class_label = entry[3]
+            #current_code_label = entry[3] + '/' + entry[4]
+
+            # CHECK IF WE ARE WITHIN, OR OUTSIDE A NEW PATENT BATCH:
+            if patentID == previous_patent:
+                # =================== IN A PATENT BATCH ===================
+                current_classes.add(current_class_label)
+                #current_codes.add(current_code_label)
+            else:
+                NUMBER_OF_RELEVANT_PATENTS += close_patent_batch()
+
+                # re-initialised
+                current_classes = set()
+                current_classes.add(current_class_label)
+                #current_codes = set()
+                #current_codes.add(current_code_label)
+                previous_patent = patentID
+                total_patents+=1
+
+            if curr_line % 1000000 == 0:
+                print 'current line: {0}'.format(curr_line)
+
+        # CLOSE PATENT BATCH FOR THE REMAINING ENTRIES
+        if len(current_classes)>0 or len(current_codes)>0:
+            NUMBER_OF_RELEVANT_PATENTS += close_patent_batch()
+            total_patents+=1
+
+    return NUMBER_OF_RELEVANT_PATENTS,total_patents
+
+def get_network_density_from_two_class_pools(class_list_A,class_list_B,network_file):
+    G = gt.load_graph(network_file)
+    is_bridge_edge = G.new_edge_property('bool')
+
+    for e in G.edges():
+        u = e.source()
+        v = e.target()
+
+        uname = G.vertex_properties['label'][u]
+        vname = G.vertex_properties['label'][v]
+
+        is_bridge_edge[e] =  (uname in class_list_A and vname in class_list_B) or (uname in class_list_B and vname in class_list_A)
+
+    G.set_edge_filter(is_bridge_edge)
+
+    return (2.*G.num_edges())/(G.num_vertices()**2 - G.num_vertices())
+
+def build_temporal_link_from_coocurrence_history_of_class_pair(classA,classB,decade_range):
+    w = []
+    xi = []
+    xj = []
+
+    for d in decade_range:
+        G = gt.load_graph('Network_files/Gclasses_{0}.xml.gz'.format(d))
+
+        vi = mygt.get_vertex_by_label(G,classA)
+        if vi is not None:
+            xi.append(G.vertex_properties['No_of_occurrences'][vi])
+        else:
+            xi.append(numpy.nan)
+
+        vj = mygt.get_vertex_by_label(G,classB)
+        if vj is not None:
+            xj.append(G.vertex_properties['No_of_occurrences'][vj])
+        else:
+            xj.append(numpy.nan)
+
+        if (vi is None) or (vj is None):
+            w.append(numpy.nan)
+        else:
+            w.append(mygt.get_edge_weight(G,classA,classB))
+
+    return BOMP.TemporalLink(w,xi,xj,decade_range)
+
+def get_adjacency_frames_CP_class_groups(decade_range = range(1790,2020,10)):
+    classes_of_era = cpickle.load(open('classes_of_era.cpickle','rb'))
+    N = 5
+    A_FRAMES = dict()
+    for d in decade_range:
+        print('Processing decade {0}...'.format(d))
+        A_FRAMES[d] = numpy.zeros((N,N),dtype=numpy.int)
+
+        for i in range(0,N-1):
+            for j in range(i+1,N):
+                aux = count_patents_where_a_two_class_pools_cooccur(classes_of_era[i],classes_of_era[j],'Patent_files/Patents_v2_{0}.csv'.format(d))
+                A_FRAMES[d][i][j] = aux[0]
+
+    return A_FRAMES

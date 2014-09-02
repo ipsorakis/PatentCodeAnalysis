@@ -8,8 +8,12 @@ import my_graph_tool_add_ons as mygt
 import graph_tool as gt
 
 # TASKS:
-# -change constructor to take only incidence matrix
-# -if coordinates provided, sparse matrix is built by a separate, static method
+# -change constructor to take only incidence matrix - DONE
+# -if coordinates provided, sparse matrix is built by a separate, static method - DONE
+# -add co-occurrences i,j for both directions
+# -add SR (Jaccard Index) for i,j for both directions
+# -get SR-based strength of i for both directions
+# -get
 
 
 class IncidenceMatrix:

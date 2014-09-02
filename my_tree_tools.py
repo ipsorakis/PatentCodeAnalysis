@@ -326,14 +326,16 @@ class tree:
 
 
 
-# TO IMPLEMENT
+# IMPLEMENTED
 # =============
 # - Open tree from old version of tree class - extended constructor - DONE
 # - Open tree from old version of tree class - external function - DONE
 # - Added wrapper node_to_node around leaf_to_leaf so that it is more generalised - DONE
 
+# TO IMPLEMENT
+# =============
 # - Store basic tree characteristics and update them only if there is any insertion/deletion
-# - Examine possible code mismatches?
+# - Examine possible code mismatches? - DONE elsewhere
 # - USPTO specific: save class depth
 # - get subtree given node
 # - export to : file (depth first)

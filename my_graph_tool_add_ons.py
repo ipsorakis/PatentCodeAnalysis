@@ -137,12 +137,13 @@ def load_graph_from_pajek(filename,is_directed=False,vertex_label = 'label',weig
     return G
 
 def are_indices_consistent_with_labels(G):
-    ic = G.graph_properties['index_of'][G.vertex_properties['label'][G.vertex(0)]] == 0
-    if not ic:
-        print 'Problem in Node: 0 with Label: ' + G.vertex_properties['label'][G.vertex(0)]
-
-    for i in range(1,G.num_vertices()):
-        ic_current = G.graph_properties['index_of'][G.vertex_properties['label'][G.vertex(i)]] == i
+    #ic = G.graph_properties['index_of'][G.vertex_properties['label'][G.vertex(0)]] == 0
+    #if not ic:
+    #    print 'Problem in Node: 0 with Label: ' + G.vertex_properties['label'][G.vertex(0)]
+    ic = True
+    for v in G.vertices():
+        i = int(v)
+        ic_current = G.graph_properties['index_of'][G.vertex_properties['label'][v]] == i
         if not ic_current:
             print 'Problem in Node: ' + str(i) + ' with Label: ' + G.vertex_properties['label'][G.vertex(0)]
         ic = ic and ic_current
@@ -906,3 +907,14 @@ def get_filter_given_node_name_list(G,vertex_list):
         except KeyError:
             continue
     return vmap
+
+def open_and_apply_filters(filename):
+    G = gt.load_graph(filename)
+    G.set_vertex_filter(G.vertex_properties['in_USPTO_tree'])
+    return G
+
+def get_vertex_by_label(G,vname):
+    if G.graph_properties['index_of'].has_key(vname):
+        return G.vertex(G.graph_properties['index_of'][vname])
+    else:
+        return None

@@ -13,16 +13,27 @@ import numpy
 import my_stat_tools as mystat
 import my_containers as mycons
 
-t = mytree.tree('c')
-t.add_node('d','c')
-t.add_node('g','d')
-t.add_node('h','d')
-t.add_node('b','c')
-t.add_node('i','b')
-t.add_node('a','b')
-t.add_node('e','a')
-t.add_node('f','a')
-t.get_path_from_to_as_node_names('g','b')
+
+test = PD.get_adjacency_frames_CP_class_groups(range(1790,1820,10))
+
+#G = gt.load_graph('Network_files/Gclasses_1790.xml.gz')
+#remove_set = ['423','082']
+#mygt.safe_delete_vertices_based_on_label(G,remove_set)
+
+#t = mytree.tree('c')
+#t.add_node('d','c')
+#t.add_node('g','d')
+#t.add_node('h','d')
+#t.add_node('b','c')
+#t.add_node('i','b')
+#t.add_node('a','b')
+#t.add_node('e','a')
+#t.add_node('f','a')
+#
+##x = t.depth_first_search('c')
+##print [n.name for n in x]
+#
+#print t.are_ancestor_descendant_pair('i','b')
 
 #t = mytree.parse_Daniel_semicolon_based_tree_format_to_my_tree_class('tree_data/daniel_sample.txt')
 
