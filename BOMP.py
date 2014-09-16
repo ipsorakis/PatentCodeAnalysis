@@ -2,7 +2,10 @@ __author__ = 'yannis'
 
 import pandas
 import numpy
+import numpy.random
 import scipy
+import graph_tool as gt
+import my_graph_tool_add_ons as mygt
 
 ###### PARSERS
 
@@ -70,30 +73,6 @@ def get_opportunities(aij,xi,xj):
 
 def sigmoid(x):
   return 1 / (1 + numpy.exp(-x))
-
-
-#def watch_and_learn(a_new,xij_new,xi_new,xj_new,kappa,lambd,gamma):
-#    # new value
-#    p_new = (1.*a_new)/xij_new
-#
-#    # do prediction
-#    p_pred_mean = p_exp(kappa,lambd)
-#    p_pred_var = p_var(kappa,lambd)
-#
-#    # calculate deviation from prediction
-#    err = error_function(p_new,p_pred_mean) #square error
-#
-#    # calculate gain
-#    gain = gain_function(err,p_pred_var)
-#
-#    # calculate new gamma
-#    gamma = fusion_function(gain,gamma)
-#
-#    #update hyperparameters
-#    kappa = gamma*kappa + (1-gamma)*a_new
-#    lambd = gamma*lambd + (1-gamma)*(xij_new - a_new)
-#
-#    return kappa,lambd,gamma,p_pred_mean,p_pred_var,err,gain ### ADD SQUARE ERROR, EXP_SQUARE_ERROR, GAIN,
 
 def watch_and_learn(a_new,xij_new,xi_new,xj_new,kappa,lambd,gamma):
     # try a prediction given new xi,xj and kappa, lambda from previous step
@@ -342,10 +321,130 @@ class TemporalLink:
 
 ##### DRAW SAMPLES FROM THE MODEL
 
-    def draw_sample_coocurrences(self,xi,xj,xij = None,timestamp=None):
+    def draw_sample_coocurrence(self,xij,timestamp=None):
+        p = self.draw_sample_coocurrence(timestamp)
+        a = numpy.random.binomial(xij,p)
+
+        return a
+
+    def draw_sample_dependency(self,timestamp=None):
         if timestamp is None:
             timestamp = self.current_timestamp
 
         kappa = self.PARAMS.kappas[timestamp]
         lambd = self.PARAMS.lambdas[timestamp]
 
+        return numpy.random.beta(kappa,lambd)
+
+class TemporalNetwork:
+    def __init__(self,TLs,node_indices = None):
+        # expects a dictionary with keys a tuple (i,j) where i,j the labels of the node pair
+        self.TLs = TLs
+
+        if node_indices is None:
+            node_indices = self.build_internal_node_index(TLs)
+        self.node_indices = node_indices
+
+        self.N = len(node_indices)
+        self.T = TLs.values()[0].T
+
+        self.current_step = -1
+        self.current_timestamp = -1
+
+        self.is_dependency_network_directed = TLs.values()[0].use_degree_as_opportunities
+
+    def learn_one_step(self):
+        for TL in self.TLs.values():
+            TL.learn_one_step()
+
+        self.current_step = TL.current_step
+        self.current_timestamp = TL.current_timestamp
+
+######
+    def draw_sample_as_graph_tool_object(self,Xijs = None,coocurrence_label = 'co_oc',dependency_label = 'SR',timestamp = None):
+        G = gt.Graph(self.is_dependency_network_directed)
+        G.vertex_properties['label'] = G.new_vertex_property('str')
+        G.edge_properties[dependency_label] = G.new_edge_property('float')
+        if Xijs is not None:
+            G.edge_properties[coocurrence_label] = G.new_edge_property('int')
+        G.graph_properties['index_of'] = G.new_graph_property('str')
+
+
+        for node_pair in self.TLs.keys():
+            TL = self.TLs[node_pair]
+
+            ilabel = node_pair[0]
+            jlabel = node_pair[1]
+
+            v = mygt.get_vertex_by_label(G,ilabel)
+            if v is None:
+                v = gt.add_vertex()
+                G.vertex_properties['label'][v] = ilabel
+                G.graph_properties['index_of'][ilabel] = int(v)
+
+            u = mygt.get_vertex_by_label(G,jlabel)
+            if u is None:
+                u = gt.add_vertex()
+                G.vertex_properties['label'][u] = jlabel
+                G.graph_properties['index_of'][jlabel] = int(u)
+
+            e = G.add_edge(v,u)
+            G.edge_properties[dependency_label][e] = TL.draw_sample_dependency(timestamp)
+
+            if Xijs is not None:
+                G.edge_properties[coocurrence_label][e] = TL.draw_sample_coocurrence(Xijs[node_pair],timestamp)
+
+        return G
+
+    def draw_sample_cooccurrence_network_as_adjacency_matrix(self,Xijs,timestamp=None):
+        Asample = numpy.zeros((self.N,self.N))
+
+        for node_pair in self.TLs.keys():
+            ilabel = node_pair[0]
+            jlabel = node_pair[1]
+
+            i = self.node_indices(ilabel)
+            j = self.node_indices(jlabel)
+
+            TL = self.TLs[node_pair]
+
+            Asample[i,j] = TL.draw_sample_coocurrence(Xijs[node_pair],timestamp)
+
+        return Asample
+
+    def draw_sample_dependency_network_as_adjacency_matrix(self,timestamp=None):
+        Psample = numpy.zeros((self.N,self.N))
+
+        for node_pair in self.TLs.keys():
+            ilabel = node_pair[0]
+            jlabel = node_pair[1]
+
+            i = self.node_indices(ilabel)
+            j = self.node_indices(jlabel)
+
+            TL = self.TLs[node_pair]
+
+            Psample[i,j] = TL.draw_sample_dependency(timestamp)
+
+        return Psample
+
+
+
+    @staticmethod
+    def build_internal_node_index(TLs):
+        node_indices = dict()
+        node_counter = -1
+
+        for node_pair in TLs.keys():
+            ilabel = node_pair[0]
+            jlabel = node_pair[1]
+
+            if not node_indices.has_key(ilabel):
+                node_counter+=1
+                node_indices[ilabel] = node_counter
+
+            if not node_indices.has_key(jlabel):
+                node_counter+=1
+                node_indices[jlabel] = node_counter
+
+        return node_indices
