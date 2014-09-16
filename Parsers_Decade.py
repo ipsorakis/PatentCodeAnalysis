@@ -1678,7 +1678,7 @@ def get_network_density_from_two_class_pools(class_list_A,class_list_B,network_f
 
     return (2.*G.num_edges())/(G.num_vertices()**2 - G.num_vertices())
 
-def build_temporal_link_from_coocurrence_history_of_class_pair(classA,classB,decade_range):
+def build_temporal_link_from_coocurrence_history_of_class_pair(classA,classB,decade_range,use_degree_as_opportunities = False):
     w = []
     xi = []
     xj = []
@@ -1703,7 +1703,7 @@ def build_temporal_link_from_coocurrence_history_of_class_pair(classA,classB,dec
         else:
             w.append(mygt.get_edge_weight(G,classA,classB))
 
-    return BOMP.TemporalLink(w,xi,xj,decade_range)
+    return BOMP.TemporalLink(w,xi,xj,decade_range,use_degree_as_opportunities)
 
 def get_adjacency_frames_CP_class_groups(decade_range = range(1790,2020,10)):
     classes_of_era = cpickle.load(open('classes_of_era.cpickle','rb'))
@@ -1719,3 +1719,42 @@ def get_adjacency_frames_CP_class_groups(decade_range = range(1790,2020,10)):
                 A_FRAMES[d][i][j] = aux[0]
 
     return A_FRAMES
+
+def extract_dependency_graph_from_G(Gbase):
+    G = gt.Graph(directed=True)
+    G.graph_properties['index_of'] = G.new_graph_property('object')
+    G.graph_properties['index_of'] = dict()
+
+    G.vertex_properties['label'] = G.new_vertex_property('string')
+    G.vertex_properties['No_of_occurrences'] = G.new_vertex_property('int')
+    G.vertex_properties['No_of_singleton_occurrences'] = G.new_vertex_property('int')
+
+    G.edge_properties['Dependence'] = G.new_edge_property('float')
+
+    for vbase in Gbase.vertices():
+        v = G.add_vertex()
+
+        G.vertex_properties['label'][v] = Gbase.vertex_properties['label'][vbase]
+        G.graph_properties['index_of'][G.vertex_properties['label'][v]] = int(v)
+        G.vertex_properties['No_of_occurrences'][v] = Gbase.vertex_properties['No_of_occurrences'][vbase]
+
+    for ebase in Gbase.edges():
+
+        i_label = Gbase.vertex_properties['label'][ebase.source()]
+        j_label = Gbase.vertex_properties['label'][ebase.target()]
+
+        i = mygt.get_vertex_by_label(G,i_label)
+        j = mygt.get_vertex_by_label(G,j_label)
+
+        xi = G.vertex_properties['No_of_occurrences'][i]
+        xj = G.vertex_properties['No_of_occurrences'][j]
+
+        eij = G.add_edge(i,j)
+        eji = G.add_edge(j,i)
+
+        coocs = 1.*Gbase.edge_properties['co_oc'][ebase]
+
+        G.edge_properties['Dependence'][eij] = coocs/xi
+        G.edge_properties['Dependence'][eji] = coocs/xj
+
+    return G

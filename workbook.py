@@ -12,9 +12,19 @@ import Bayesian_Non_Parametrics as BNP
 import numpy
 import my_stat_tools as mystat
 import my_containers as mycons
+import BOMP
+import matplotlib.pylab as pylab
 
+classA = '136'
+classB = '257'
+decade_range = range(1790,2010,10)
+TL = PD.build_temporal_link_from_coocurrence_history_of_class_pair(classA,classB,decade_range,True)
+#print TL.DATA
 
-test = PD.get_adjacency_frames_CP_class_groups(range(1790,1820,10))
+OUTPUT = TL.learn_all_steps()
+print OUTPUT
+
+#test = PD.get_adjacency_frames_CP_class_groups(range(1790,1820,10))
 
 #G = gt.load_graph('Network_files/Gclasses_1790.xml.gz')
 #remove_set = ['423','082']
