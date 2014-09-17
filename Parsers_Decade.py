@@ -12,6 +12,7 @@ import my_stat_tools as mystat
 import pandas
 import re
 import BOMP
+import itertools
 
 def split_Patent_Codes_to_decades(filename = 'PatentCodes.csv', decade_range = range(1790,2020,10), Patents = None, last_read_line = 1):
     print 'opening Patents lookup table...'
@@ -1704,6 +1705,46 @@ def build_temporal_link_from_coocurrence_history_of_class_pair(classA,classB,dec
             w.append(mygt.get_edge_weight(G,classA,classB))
 
     return BOMP.TemporalLink(w,xi,xj,decade_range,use_degree_as_opportunities)
+
+def build_temporal_network_from_coocurrence_history_of_class_pair(classes,decade_range,use_degree_as_opportunities = False):
+    Aijs = dict()
+    Xis = pandas.DataFrame(columns=classes,index=decade_range)
+    TLs = dict()
+
+    if use_degree_as_opportunities:
+        all_class_pairs = [class_pair for class_pair in itertools.permutations(classes,2)]
+    else:
+        all_class_pairs = [class_pair for class_pair in itertools.combinations(classes,2)]
+
+    for class_pair in all_class_pairs:
+        Aijs[class_pair] = []
+        TLs[class_pair] = []
+
+    for d in decade_range:
+        G = gt.load_graph('Network_files/Gclasses_{0}.xml.gz'.format(d))
+        print 'Processing decade {0}...'.format(d)
+
+        for class_pair in itertools.combinations(classes,2):# network is symmetric, so we iterate over unique pairs by default
+            classA = class_pair[0]
+            classB = class_pair[1]
+
+            vi = mygt.get_vertex_by_label(G,classA)
+            if vi is not None:
+                Xis.loc[d,classA] = G.vertex_properties['No_of_occurrences'][vi]
+
+            vj = mygt.get_vertex_by_label(G,classB)
+            if vj is not None:
+                Xis.loc[d,classB] = G.vertex_properties['No_of_occurrences'][vj]
+
+            if (vi is None) or (vj is None):
+                Aijs[class_pair].append(numpy.nan)
+            else:
+                Aijs[class_pair].append(mygt.get_edge_weight(G,classA,classB))
+
+    for class_pair in all_class_pairs:
+        TLs[class_pair] = BOMP.TemporalLink(Aijs[class_pair],Xis[class_pair[0]],Xis[class_pair[1]],decade_range,use_degree_as_opportunities)
+
+    return BOMP.TemporalNetwork(TLs)
 
 def get_adjacency_frames_CP_class_groups(decade_range = range(1790,2020,10)):
     classes_of_era = cpickle.load(open('classes_of_era.cpickle','rb'))

@@ -139,12 +139,34 @@ class TemporalLink:
 
         self.use_degree_as_opportunities = use_degree_as_opportunities
 
-        self.k0 = 10
+        self.k0 = .01
         self.l0 = 10
         self.g0 = .5
 
         self.current_step = -1
         self.current_timestamp = -1
+
+    def export_black_box(self):
+        black_box = dict()
+        black_box['DATA'] = self.DATA
+        black_box['PARAMS'] = self.PARAMS
+        black_box['AUX'] = self.AUX
+        black_box['T'] = self.T
+        black_box['timestamps'] = self.timestamps
+        black_box['use_degree_as_opportunities'] = self.use_degree_as_opportunities
+        black_box['current_step'] = self.current_step
+        black_box['current_timestamp'] = self.current_timestamp
+        return black_box
+
+    def import_black_box(self,black_box):
+        self.DATA = black_box['DATA']
+        self.PARAMS = black_box['PARAMS']
+        self.AUX = black_box['AUX']
+        self.T = black_box['T']
+        self.timestamps = black_box['timestamps']
+        self.use_degree_as_opportunities = black_box['use_degree_as_opportunities']
+        self.current_step = black_box['current_step']
+        self.current_timestamp = black_box['current_timestamp']
 
 #### TIME FUNCTIONS
     def increment_time(self):
@@ -292,10 +314,15 @@ class TemporalLink:
         else:
             return a_std(self.PARAMS.kappas[timestamp_prev],self.PARAMS.lambdas[timestamp_prev],self.PARAMS.xijs[timestamp_prev])
 
-    def get_p_exp_at_step(self,step):
-        timestamp = self.timestamps[step]
+    def get_p_exp_at_step(self,step=None):
+        if step is None:
+            timestamp = self.current_timestamp
+        else:
+            timestamp = self.timestamps[step]
         return self.get_p_exp_at_timestamp(timestamp)
-    def get_p_exp_at_timestamp(self,timestamp):
+    def get_p_exp_at_timestamp(self,timestamp=None):
+        if timestamp is None:
+            timestamp = self.current_timestamp
         return (1.*self.PARAMS.kappas[timestamp])/(self.PARAMS.kappas[timestamp] + self.PARAMS.lambdas[timestamp])
 
     def get_all_p_exp(self):
@@ -353,6 +380,26 @@ class TemporalNetwork:
 
         self.is_dependency_network_directed = TLs.values()[0].use_degree_as_opportunities
 
+    def export_black_box(self):
+        black_box = dict()
+        black_box['TLs'] = self.TLs
+        black_box['node_indices'] = self.node_indices
+        black_box['N'] = self.N
+        black_box['T'] = self.T
+        black_box['current_step'] = self.current_step
+        black_box['current_timestamp'] = self.current_timestamp
+        black_box['is_dependency_network_directed'] = self.is_dependency_network_directed
+        return black_box
+
+    def import_black_box(self,black_box):
+        self.TLs = black_box['TLs']
+        self.node_indices = black_box['node_indices']
+        self.N = black_box['N']
+        self.T = black_box['T']
+        self.current_step = black_box['current_step']
+        self.current_timestamp = black_box['current_timestamp']
+        self.is_dependency_network_directed = black_box['is_dependency_network_directed']
+
     def learn_one_step(self):
         for TL in self.TLs.values():
             TL.learn_one_step()
@@ -360,14 +407,22 @@ class TemporalNetwork:
         self.current_step = TL.current_step
         self.current_timestamp = TL.current_timestamp
 
+    def learn_all_steps(self):
+        for TL in self.TLs.values():
+            TL.learn_all_steps()
+
+        self.current_step = TL.current_step
+        self.current_timestamp = TL.current_timestamp
+
 ######
     def draw_sample_as_graph_tool_object(self,Xijs = None,coocurrence_label = 'co_oc',dependency_label = 'SR',timestamp = None):
-        G = gt.Graph(self.is_dependency_network_directed)
-        G.vertex_properties['label'] = G.new_vertex_property('str')
+        G = gt.Graph(directed=self.is_dependency_network_directed)
+        G.vertex_properties['label'] = G.new_vertex_property('string')
         G.edge_properties[dependency_label] = G.new_edge_property('float')
         if Xijs is not None:
             G.edge_properties[coocurrence_label] = G.new_edge_property('int')
-        G.graph_properties['index_of'] = G.new_graph_property('str')
+        G.graph_properties['index_of'] = G.new_graph_property('object')
+        G.graph_properties['index_of'] = dict()
 
 
         for node_pair in self.TLs.keys():
@@ -378,13 +433,13 @@ class TemporalNetwork:
 
             v = mygt.get_vertex_by_label(G,ilabel)
             if v is None:
-                v = gt.add_vertex()
+                v = G.add_vertex()
                 G.vertex_properties['label'][v] = ilabel
                 G.graph_properties['index_of'][ilabel] = int(v)
 
             u = mygt.get_vertex_by_label(G,jlabel)
             if u is None:
-                u = gt.add_vertex()
+                u = G.add_vertex()
                 G.vertex_properties['label'][u] = jlabel
                 G.graph_properties['index_of'][jlabel] = int(u)
 
@@ -403,8 +458,8 @@ class TemporalNetwork:
             ilabel = node_pair[0]
             jlabel = node_pair[1]
 
-            i = self.node_indices(ilabel)
-            j = self.node_indices(jlabel)
+            i = self.node_indices[ilabel]
+            j = self.node_indices[jlabel]
 
             TL = self.TLs[node_pair]
 
@@ -419,15 +474,67 @@ class TemporalNetwork:
             ilabel = node_pair[0]
             jlabel = node_pair[1]
 
-            i = self.node_indices(ilabel)
-            j = self.node_indices(jlabel)
+            i = self.node_indices[ilabel]
+            j = self.node_indices[jlabel]
 
             TL = self.TLs[node_pair]
 
-            Psample[i,j] = TL.draw_sample_dependency(timestamp)
+            if not self.is_dependency_network_directed:
+                if j>i:
+                    k=j
+                    j=i
+                    i=k
+
+                Psample[i,j] = TL.draw_sample_dependency(timestamp)
+                Psample[j,i] = Psample[i,j]
+            else:
+                Psample[i,j] = TL.draw_sample_dependency(timestamp)
 
         return Psample
 
+    def export_p_exp_network_as_adjacency_matrix(self,timestamp = None):
+        Pexp = numpy.zeros((self.N,self.N))
+
+        for node_pair in self.TLs.keys():
+            ilabel = node_pair[0]
+            jlabel = node_pair[1]
+
+            i = self.node_indices[ilabel]
+            j = self.node_indices[jlabel]
+
+            TL = self.TLs[node_pair]
+
+            if not self.is_dependency_network_directed:
+                if j<i:
+                    k=j
+                    j=i
+                    i=k
+                Pexp[i,j] = TL.get_p_exp_at_timestamp(timestamp)
+                Pexp[j,i] = Pexp[i,j]
+            else:
+                Pexp[i,j] = TL.get_p_exp_at_timestamp(timestamp)
+
+        return Pexp
+
+    def export_a_exp_network_as_adjacency_matrix(self,Xijs,timestamp):
+        Aexp = numpy.zeros((self.N,self.N))
+
+        for node_pair in self.TLs.keys():
+            ilabel = node_pair[0]
+            jlabel = node_pair[1]
+
+            i = self.node_indices[ilabel]
+            j = self.node_indices[jlabel]
+
+            TL = self.TLs[node_pair]
+
+            if j<i:
+                k=j
+                j=i
+                i=k
+
+            Aexp[i,j] = TL.get_p_exp_at_timestamp(timestamp) * Xijs[node_pair]
+        return Aexp
 
 
     @staticmethod

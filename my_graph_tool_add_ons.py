@@ -868,12 +868,18 @@ def get_strength_distribution_by_neighbour_type(G,v,weight_type='co_oc'):
 
     return {'self_strength':self_strength,'same_class_strength':same_class_strength,'diff_class_strength':diff_class_strength}
 
-def get_adjacency_matrix_from_gt_graph(G,weight = 'co_oc'):
-    xs = []
-    ys = []
-    vals = []
+def export_adjacency_matrix_from_gt_graph(G,weight = 'co_oc',label_lookup = None):
 
-    label_lookup = dict()
+    if label_lookup is None:
+        label_lookup = G.graph_properties['index_of']
+    elif label_lookup is not None and len(label_lookup)!=G.num_vertices():
+        ValueError('Lookup dictionary size does not match graph size')
+
+    #xs = []
+    #ys = []
+    #vals = []
+    N = len(label_lookup)
+    A = numpy.zeros((N,N))
 
     for e in G.edges():
         x = int(e.source())
@@ -882,20 +888,25 @@ def get_adjacency_matrix_from_gt_graph(G,weight = 'co_oc'):
         labelx = G.vertex_properties['label'][e.source()]
         labely = G.vertex_properties['label'][e.target()]
 
-        if not label_lookup.has_key(labelx):
-            label_lookup[labelx] = x
-        if not label_lookup.has_key(labely):
-            label_lookup[labely] = y
-
-        xs.append(x)
-        ys.append(y)
-        vals.append(v)
+        #if not label_lookup.has_key(labelx):
+        #    label_lookup[labelx] = x
+        #if not label_lookup.has_key(labely):
+        #    label_lookup[labely] = y
 
 
-    A = scipy.sparse.coo_matrix((vals,(xs,ys)),shape=(G.num_vertices(),G.num_vertices()))
-    A = A.tocsc()
+        #xs.append(label_lookup[labelx])
+        #ys.append(label_lookup[labely])
+        #vals.append(v)
+        if label_lookup.has_key(labelx) and label_lookup.has_key(labely):
+            i = label_lookup[labelx]
+            j = label_lookup[labely]
+            A[i,j] = v
+            A[j,i] = v
 
-    return A,label_lookup
+    #A = scipy.sparse.coo_matrix((vals,(xs,ys)),shape=(G.num_vertices(),G.num_vertices()))
+    #A = A.tocsc()
+
+    return A
 
 def get_filter_given_node_name_list(G,vertex_list):
     vmap = G.new_vertex_property('bool')
