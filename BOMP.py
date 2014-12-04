@@ -16,10 +16,6 @@ def read_incidence_matrix_sequence(Bs):
     As = []
     Ds = []
 
-    coocurrences_ij = []
-    occurrences_i = []
-    occurrences_j = []
-
     TLs = dict()
 
     for B in Bs:
@@ -41,6 +37,16 @@ def read_incidence_matrix_sequence(Bs):
             TLs[ij].learn_all_steps()
 
     return TLs, As
+
+def copycat_predictor(OUTPUT):
+    aijs_pred = pandas.TimeSeries([0] + [OUTPUT.aijs.iloc[t] for t in range(0,len(OUTPUT.index)-1)],index = OUTPUT.index)
+    pijs_pred = pandas.TimeSeries([0]+[OUTPUT.pijs.iloc[t] for t in range(0,len(OUTPUT.index)-1)],index = OUTPUT.index)
+
+    return pandas.DataFrame({'aijs_pred': aijs_pred,
+                             'aijs_sqr_err': (aijs_pred - OUTPUT.aijs)**2,
+                              'pijs_pred': pijs_pred,
+                              'pijs_sqr_err': (pijs_pred - OUTPUT.pijs)**2},
+                              index = OUTPUT.index)
 ###### MODEL
 
 def p_exp(k,l):
@@ -64,18 +70,21 @@ def a_exp_from_observed_opportunities(k,l,x):
 def a_exp_from_predicted_opportunities(k,l,xi,xj = None):
     Ep = p_exp(k,l)
     if xj is not None:
-        return (xi+xj)*(Ep/(1+Ep))
+        #return (xi+xj)*(Ep/(1+Ep)) ##### OLD OPPORTUNITIES
+        return min(xi,xj)*Ep
     else:
         return xi*Ep
 
 def get_opportunities(aij,xi,xj):
-    return xi + xj - aij
+    #return xi + xj - aij ##### OLD OPPORTUNITIES
+    return min(xi,xj)
 
 def sigmoid(x):
   return 1 / (1 + numpy.exp(-x))
 
 def watch_and_learn(a_new,xij_new,xi_new,xj_new,kappa,lambd,gamma):
     # try a prediction given new xi,xj and kappa, lambda from previous step
+
     a_pred = a_exp_from_predicted_opportunities(kappa,lambd,xi_new,xj_new)
 
     # also do a prediction for pijs
@@ -107,7 +116,7 @@ def gain_function(err,exp_error):
     return  err / exp_error
 
 def fusion_function(gain,gamma): #it cal also take old gamma
-    return 1/(1+gain) #logistic
+    return 1/(1+gain) #logistic between 0 and .5
 
 class TemporalLink:
 
@@ -197,39 +206,44 @@ class TemporalLink:
 
 #### MODEL LEARNING
     def learn_one_step(self):
-        if self.current_step!=-1:
-            kappa = self.PARAMS.kappas[self.current_timestamp]
-            lambd = self.PARAMS.lambdas[self.current_timestamp]
-            gamma = self.PARAMS.gammas[self.current_timestamp]
+        self.increment_time()
+
+        # TAKE THE PRIORS -- KAPPA, LAMBDA, GAMMA FROM PREVIOUS STEP
+        if self.current_step != 0:
+            kappa = self.PARAMS.kappas[self.previous_timestamp()]
+            lambd = self.PARAMS.lambdas[self.previous_timestamp()]
+            gamma = self.PARAMS.gammas[self.previous_timestamp()]
         else:
             kappa = self.k0
             lambd = self.l0
             gamma = self.g0
 
-        xi = self.DATA.xis[self.next_timestamp()]
-        xj = self.DATA.xjs[self.next_timestamp()]
+        #print '{0}: {1}, kappa_prior: {2}, lambda_prior:{3}, p_pred:{4}'.format(self.current_step,self.current_timestamp,kappa,lambd,p_exp(kappa,lambd))
 
-        if (not numpy.isnan(xi)) and  (not numpy.isnan(xj)):
-            a_new = self.DATA.aijs[self.next_timestamp()]
+        # TAKE THE NEW OBSERVATIONS -- xi xj from current step
+        xi_new = self.DATA.xis[self.current_timestamp]
+        xj_new = self.DATA.xjs[self.current_timestamp]
+
+        # IF NOT NAN, POSTERIOR UPDATE
+        if (not numpy.isnan(xi_new)) and  (not numpy.isnan(xj_new)):
+            a_new = self.DATA.aijs[self.current_timestamp]
 
             if not self.use_degree_as_opportunities:
-                xij_new = get_opportunities(a_new,xi,xj)
-                kappa,lambd,gamma,a_pred,exp_error,err,gain,p_pred_mean,p_pred_var = watch_and_learn(a_new,xij_new,xi,xj,kappa,lambd,gamma)
+                xij_new = get_opportunities(a_new,xi_new,xj_new)
+                kappa,lambd,gamma,a_pred,exp_error,err,gain,p_pred_mean,p_pred_var = watch_and_learn(a_new,xij_new,xi_new,xj_new,kappa,lambd,gamma)
             else:
-                kappa,lambd,gamma,a_pred,exp_error,err,gain,p_pred_mean,p_pred_var = watch_and_learn(a_new,xi,xi,None,kappa,lambd,gamma)
+                kappa,lambd,gamma,a_pred,exp_error,err,gain,p_pred_mean,p_pred_var = watch_and_learn(a_new,xi_new,xi_new,None,kappa,lambd,gamma)
 
-            self.AUX.aijs_pred[self.next_timestamp()] = a_pred
-            self.AUX.aijs_var[self.next_timestamp()] = exp_error
-            self.AUX.sqr_err[self.next_timestamp()] = err
-            self.AUX.gain[self.next_timestamp()] = gain
-            self.AUX.pijs_pred[self.next_timestamp()] = p_pred_mean
-            self.AUX.pijs_pred_var[self.next_timestamp()] = p_pred_var
+            self.AUX.aijs_pred[self.current_timestamp] = a_pred
+            self.AUX.aijs_var[self.current_timestamp] = exp_error
+            self.AUX.sqr_err[self.current_timestamp] = err
+            self.AUX.gain[self.current_timestamp] = gain
+            self.AUX.pijs_pred[self.current_timestamp] = p_pred_mean
+            self.AUX.pijs_pred_var[self.current_timestamp] = p_pred_var
 
-        self.increment_time()
         self.PARAMS.kappas[self.current_timestamp] = kappa
         self.PARAMS.lambdas[self.current_timestamp] = lambd
         self.PARAMS.gammas[self.current_timestamp] = gamma
-
 
     def learn_all_steps(self):
         for t in range(self.current_step,self.T-1):
@@ -243,16 +257,14 @@ class TemporalLink:
                                 'xjs':self.DATA.xjs,
                                 'xijs':self.get_all_opportunities(),
                                 'pijs':self.get_all_simple_ratios(),
-                                'pijs_pred':self.get_all_p_exp(),
-                                'pijs_pred_var':self.get_all_p_var(),
-                                #'a_pred': pandas.Series([self.predict_exp_coocurrences_at_timestamp(t) for t in self.timestamps],index=self.timestamps),
+                                'pijs_pred':self.AUX.pijs_pred,
+                                'pijs_pred_var':self.AUX.pijs_pred_var,
                                 'aijs_pred': self.AUX.aijs_pred,
                                 'aijs_var': self.AUX.aijs_var,
                                 'sqr_err': self.AUX.sqr_err,
-                                'gain': self.AUX.gain,
-                                #'x_pred': pandas.Series([self.predict_exp_opportunities_at_timestamp(t) for t in self.timestamps],index=self.timestamps),
-                                #'kappas': self.PARAMS.kappas,
-                                #'lambdas':self.PARAMS.lambdas,
+                                #'gain': self.AUX.gain,
+                                'kappas': self.PARAMS.kappas,
+                                'lambdas':self.PARAMS.lambdas,
                                 'gammas':self.PARAMS.gammas
                                 #'SRs':self.get_all_simple_ratios()
                                 },
@@ -285,9 +297,10 @@ class TemporalLink:
             xi = self.DATA.xis[timestamp]
             xj = self.DATA.xjs[timestamp]
             if not self.use_degree_as_opportunities:
-                kappa = self.PARAMS.kappas[self.previous_timestamp()]
-                lambd = self.PARAMS.lambdas[self.previous_timestamp()]
-                return xi + xj - a_exp_from_predicted_opportunities(kappa,lambd,xi,xj)
+                #kappa = self.PARAMS.kappas[self.previous_timestamp()]
+                #lambd = self.PARAMS.lambdas[self.previous_timestamp()]
+                #return xi + xj - a_exp_from_predicted_opportunities(kappa,lambd,xi,xj) ##### OLD OPPORTUNITIES
+                return get_opportunities(None,xi,xj)
             else:
                 return xi
         else:
@@ -298,10 +311,10 @@ class TemporalLink:
         timestamp = self.timestamps[step]
         return self.get_opportunities_at_timestamp(timestamp)
     def get_opportunities_at_timestamp(self,timestamp):
-        aij = self.DATA.aijs[timestamp]
+        #aij = self.DATA.aijs[timestamp] OLD OPPORTUNITIES
         xi = self.DATA.xis[timestamp]
         xj = self.DATA.xjs[timestamp]
-        return xi + xj - aij
+        return min(xi,xj)
 
     def get_a_pred_std_at_step(self,step):
         timestamp = self.timestamps[step]
@@ -335,7 +348,8 @@ class TemporalLink:
         if self.use_degree_as_opportunities:
             return self.DATA.xis
         else:
-            return self.DATA.xis + self.DATA.xjs - self.DATA.aijs
+            #return self.DATA.xis + self.DATA.xjs - self.DATA.aijs OLD OPPORTUNITES
+            return [min(self.DATA.loc[i,'xjs'],self.DATA.loc[i,'xis']) for i in self.DATA.index]
 
     def get_all_simple_ratios(self):
         return (1.*self.DATA.aijs) / self.get_all_opportunities()
@@ -348,8 +362,16 @@ class TemporalLink:
 
 ##### DRAW SAMPLES FROM THE MODEL
 
-    def draw_sample_coocurrence(self,xij,timestamp=None):
-        p = self.draw_sample_coocurrence(timestamp)
+    #### TO BE RENAMED AS DRAW PREDICTIVE SAMPLES
+
+    def draw_sample_coocurrence(self,timestamp=None,xij = None):
+        if timestamp is None:
+            timestamp = self.current_timestamp
+
+        if xij is None:
+            xij = min(self.DATA.xis,self.DATA.xjs)
+
+        p = self.draw_sample_dependency(timestamp)
         a = numpy.random.binomial(xij,p)
 
         return a
@@ -358,8 +380,13 @@ class TemporalLink:
         if timestamp is None:
             timestamp = self.current_timestamp
 
-        kappa = self.PARAMS.kappas[timestamp]
-        lambd = self.PARAMS.lambdas[timestamp]
+        previous_timestamp = self.previous_timestamp_of_given(timestamp)
+        if numpy.isnan(previous_timestamp):
+            kappa = self.k0
+            lambd = self.l0
+        else:
+            kappa = self.PARAMS.kappas[timestamp]
+            lambd = self.PARAMS.lambdas[timestamp]
 
         return numpy.random.beta(kappa,lambd)
 
@@ -400,6 +427,36 @@ class TemporalNetwork:
         self.current_timestamp = black_box['current_timestamp']
         self.is_dependency_network_directed = black_box['is_dependency_network_directed']
 
+
+#### TIME FUNCTIONS
+    def increment_time(self):
+        self.current_step +=1
+        self.current_timestamp = self.timestamps[self.current_step]
+    def get_step_from_timestamp(self,timestamp):
+        return self.timestamps.index(timestamp)
+    def next_timestamp(self):
+        if self.current_step!=self.T-1:
+            return self.timestamps[self.current_step+1]
+        else:
+            return numpy.nan
+    def next_timestamp_of_given(self,timestamp):
+        if timestamp!=self.timestamps[-1]:
+            return self.timestamps[self.get_step_from_timestamp(timestamp) +1]
+        else:
+            return numpy.nan
+    def previous_timestamp(self):
+        if self.current_step!=0:
+            return self.timestamps[self.current_step-1]
+        else:
+            return numpy.nan
+    def previous_timestamp_of_given(self,timestamp):
+        if timestamp!=self.timestamps[0]:
+            return self.timestamps[self.get_step_from_timestamp(timestamp) -1]
+        else:
+            return numpy.nan
+
+###### LEARNING
+
     def learn_one_step(self):
         for TL in self.TLs.values():
             TL.learn_one_step()
@@ -416,6 +473,7 @@ class TemporalNetwork:
 
 ######
     def draw_sample_as_graph_tool_object(self,Xijs = None,coocurrence_label = 'co_oc',dependency_label = 'SR',timestamp = None):
+
         G = gt.Graph(directed=self.is_dependency_network_directed)
         G.vertex_properties['label'] = G.new_vertex_property('string')
         G.edge_properties[dependency_label] = G.new_edge_property('float')
@@ -451,7 +509,7 @@ class TemporalNetwork:
 
         return G
 
-    def draw_sample_cooccurrence_network_as_adjacency_matrix(self,Xijs,timestamp=None):
+    def draw_sample_cooccurrence_network_as_adjacency_matrix(self,timestamp=None):
         Asample = numpy.zeros((self.N,self.N))
 
         for node_pair in self.TLs.keys():
@@ -463,7 +521,9 @@ class TemporalNetwork:
 
             TL = self.TLs[node_pair]
 
-            Asample[i,j] = TL.draw_sample_coocurrence(Xijs[node_pair],timestamp)
+
+            Asample[i,j] = TL.draw_sample_coocurrence(timestamp)
+
 
         return Asample
 
@@ -509,14 +569,14 @@ class TemporalNetwork:
                     k=j
                     j=i
                     i=k
-                Pexp[i,j] = TL.get_p_exp_at_timestamp(timestamp)
+                Pexp[i,j] = TL.AUX.pijs_pred[timestamp]
                 Pexp[j,i] = Pexp[i,j]
             else:
-                Pexp[i,j] = TL.get_p_exp_at_timestamp(timestamp)
+                Pexp[i,j] = TL.AUX.pijs_pred[timestamp]
 
         return Pexp
 
-    def export_a_exp_network_as_adjacency_matrix(self,Xijs,timestamp):
+    def export_a_exp_network_as_adjacency_matrix(self,timestamp):
         Aexp = numpy.zeros((self.N,self.N))
 
         for node_pair in self.TLs.keys():
@@ -533,7 +593,7 @@ class TemporalNetwork:
                 j=i
                 i=k
 
-            Aexp[i,j] = TL.get_p_exp_at_timestamp(timestamp) * Xijs[node_pair]
+            Aexp[i,j] =  TL.AUX.aijs_pred[timestamp]
         return Aexp
 
 

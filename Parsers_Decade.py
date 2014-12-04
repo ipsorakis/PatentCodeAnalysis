@@ -14,6 +14,7 @@ import re
 import BOMP
 import itertools
 
+#not important
 def split_Patent_Codes_to_decades(filename = 'PatentCodes.csv', decade_range = range(1790,2020,10), Patents = None, last_read_line = 1):
     print 'opening Patents lookup table...'
 
@@ -73,6 +74,7 @@ def split_Patent_Codes_to_decades(filename = 'PatentCodes.csv', decade_range = r
 
     print 'Successfully read ' + str(num_lines) + ' lines.'
 
+#not important
 def split_All_Code_Pairs_to_decades(filename = 'All_Code_Pairs.csv',decade_range = range(1790,2020,10),last_read_line = 1):
     print 'opening Patents lookup table...'
     
@@ -115,6 +117,7 @@ def split_All_Code_Pairs_to_decades(filename = 'All_Code_Pairs.csv',decade_range
 
     print 'Successfully read ' + str(num_lines) + ' lines.'
 
+#not important
 def top_up_split_All_Code_Pairs_to_decades(file_name):
     print 'opening Patents lookup table...'
 
@@ -152,6 +155,7 @@ def top_up_split_All_Code_Pairs_to_decades(file_name):
 
     print 'Successfully read ' + str(num_lines) + ' lines.'
 
+#not important
 def load_patent_codes_from_csv_to_dict(datafile):
     """
     0.Pat_Type,1.Patent,2.Primary,3.Class,4.Subclass,5.Type,6.GDate,7.AppDate,8.Appyear
@@ -215,98 +219,99 @@ def find_newly_introduced_technologies_per_decade(decade):
 
     #    TO BE FINISHED
 
+#not important
 def load_coocurrence_networks_from_patent_code_file_to_graph_tool(datafile,Gclasses = None,Gcodes = None, normalise_weights = True):
 
     def close_patent_batch():
-            # *** NODE PROCESSING ***
-            # iterate through each code:
-            for aclass_label in current_classes:
-                # check if node of class1 exists:
-                if not Gclasses.graph_properties['index_of'].has_key(aclass_label):
-                    aclass_vertex = Gclasses.add_vertex()
-                    aclass_index = int(aclass_vertex)
-                    Gclasses.vertex_properties['label'][aclass_vertex] = aclass_label
-                    Gclasses.graph_properties['index_of'][aclass_label] = aclass_index
-                # else just find its index/object pointer
-                else:
-                    aclass_index = Gclasses.graph_properties['index_of'][aclass_label]
-                    aclass_vertex = Gclasses.vertex(aclass_index)
+        # *** NODE PROCESSING ***
+        # iterate through each code:
+        for aclass_label in current_classes:
+            # check if node of class1 exists:
+            if not Gclasses.graph_properties['index_of'].has_key(aclass_label):
+                aclass_vertex = Gclasses.add_vertex()
+                aclass_index = int(aclass_vertex)
+                Gclasses.vertex_properties['label'][aclass_vertex] = aclass_label
+                Gclasses.graph_properties['index_of'][aclass_label] = aclass_index
+            # else just find its index/object pointer
+            else:
+                aclass_index = Gclasses.graph_properties['index_of'][aclass_label]
+                aclass_vertex = Gclasses.vertex(aclass_index)
                 # using the vertex object increment its number of patents:
-                Gclasses.vertex_properties['No_of_occurrences'][aclass_vertex] +=1
+            Gclasses.vertex_properties['No_of_occurrences'][aclass_vertex] +=1
 
-            for acode_label in current_codes:
-                if not Gcodes.graph_properties['index_of'].has_key(acode_label):
-                    acode_vertex = Gcodes.add_vertex()
-                    acode_index = int(acode_vertex)
-                    Gcodes.vertex_properties['label'][acode_vertex] = acode_label
-                    Gcodes.graph_properties['index_of'][acode_label] = acode_index
-                else:
-                    acode_index = Gcodes.graph_properties['index_of'][acode_label]
-                    acode_vertex = Gcodes.vertex(acode_index)
+        if not Gcodes.graph_properties['index_of'].has_key(acode_label):
+            acode_vertex = Gcodes.add_vertex()
+            acode_index = int(acode_vertex)
+            Gcodes.vertex_properties['label'][acode_vertex] = acode_label
+            Gcodes.graph_properties['index_of'][acode_label] = acode_index
+        else:
+            acode_index = Gcodes.graph_properties['index_of'][acode_label]
+            acode_vertex = Gcodes.vertex(acode_index)
 
-                # using the vertex object increment its number of patents:
-                Gcodes.vertex_properties['No_of_occurrences'][acode_vertex] +=1
+        for acode_label in current_codes:
+            # using the vertex object increment its number of patents:
+            Gcodes.vertex_properties['No_of_occurrences'][acode_vertex] +=1
 
-            # =================== EDGE PROCESSING ===================
-            # first check if there is only one class:
-            if len(current_classes)>1:
-                class_list = [aclass for aclass in current_classes]
-                N = len(class_list)
-                # then for each unique pair of classes,
-                for i in range(0,N-1):
-                    for j in range(i+1,N):
-                        class_i_label = class_list[i]
-                        class_i_vertex = Gclasses.graph_properties['index_of'][class_i_label]
-                        class_j_label = class_list[j]
-                        class_j_vertex = Gclasses.graph_properties['index_of'][class_j_label]
+        # =================== EDGE PROCESSING ===================
+        # first check if there is only one class:
+        if len(current_classes)>1:
+            class_list = [aclass for aclass in current_classes]
+            N = len(class_list)
+            # then for each unique pair of classes,
+            for i in range(0,N-1):
+                for j in range(i+1,N):
+                    class_i_label = class_list[i]
+                    class_i_vertex = Gclasses.graph_properties['index_of'][class_i_label]
+                    class_j_label = class_list[j]
+                    class_j_vertex = Gclasses.graph_properties['index_of'][class_j_label]
 
-                        # check if edge exists:
-                        if not Gclasses.edge(class_i_vertex,class_j_vertex):
-                            # if not, create it
-                            edge_i_j = Gclasses.add_edge(class_i_vertex,class_j_vertex)
-                        else:
-                            edge_i_j = Gclasses.edge(class_i_vertex,class_j_vertex)
+                    # check if edge exists:
+                    if not Gclasses.edge(class_i_vertex,class_j_vertex):
+                        # if not, create it
+                        edge_i_j = Gclasses.add_edge(class_i_vertex,class_j_vertex)
+                    else:
+                        edge_i_j = Gclasses.edge(class_i_vertex,class_j_vertex)
 
-                        # increment the edge weight
-                        Gclasses.edge_properties['co_oc'][edge_i_j] +=1
+                    # increment the edge weight
+                    Gclasses.edge_properties['co_oc'][edge_i_j] +=1
 
-            # count self-appearances
-            elif len(current_classes)==1:
-                class_label = current_classes.pop()
-                class_index = Gclasses.graph_properties['index_of'][class_label]
-                class_vertex = Gclasses.vertex(class_index)
-                Gclasses.vertex_properties['No_of_singleton_occurrences'][class_vertex]+=1
+        # count self-appearances
+        elif len(current_classes)==1:
+            class_label = current_classes.pop()
+            class_index = Gclasses.graph_properties['index_of'][class_label]
+            class_vertex = Gclasses.vertex(class_index)
+            Gclasses.vertex_properties['No_of_singleton_occurrences'][class_vertex]+=1
 
-            # repeat the process for codes
-            # first check if there is only one code:
-            if len(current_codes)>1:
-                code_list = [acode for acode in current_codes]
-                N = len(code_list)
-                # then for each unique pair of codes,
-                for i in range(0,N-1):
-                    for j in range(i+1,N):
-                        code_i_label = code_list[i]
-                        code_j_label = code_list[j]
+        # repeat the process for codes
+        # first check if there is only one code:
+        if len(current_codes)>1:
+            code_list = [acode for acode in current_codes]
+            N = len(code_list)
+            # then for each unique pair of codes,
+            for i in range(0,N-1):
+                for j in range(i+1,N):
+                    code_i_label = code_list[i]
+                    code_j_label = code_list[j]
 
-                        code_i_vertex = Gcodes.graph_properties['index_of'][code_i_label]
-                        code_j_vertex = Gcodes.graph_properties['index_of'][code_j_label]
+                    code_i_vertex = Gcodes.graph_properties['index_of'][code_i_label]
+                    code_j_vertex = Gcodes.graph_properties['index_of'][code_j_label]
 
-                        # check if edge exists:
-                        if not Gcodes.edge(code_i_vertex,code_j_vertex):
-                            # if not, create it
-                            edge_i_j = Gcodes.add_edge(code_i_vertex,code_j_vertex)
-                        else:
-                            edge_i_j = Gcodes.edge(code_i_vertex,code_j_vertex)
+                    # check if edge exists:
+                    if not Gcodes.edge(code_i_vertex,code_j_vertex):
+                        # if not, create it
+                        edge_i_j = Gcodes.add_edge(code_i_vertex,code_j_vertex)
+                    else:
+                        edge_i_j = Gcodes.edge(code_i_vertex,code_j_vertex)
 
-                        # increment the edge weight
-                        Gcodes.edge_properties['co_oc'][edge_i_j] +=1
+                    # increment the edge weight
+                    Gcodes.edge_properties['co_oc'][edge_i_j] +=1
 
-            # count self-appearances
-            elif len(current_codes)==1:
-                code_label = current_codes.pop()
-                code_index = Gcodes.graph_properties['index_of'][code_label]
-                code_vertex = Gcodes.vertex(code_index)
-                Gcodes.vertex_properties['No_of_singleton_occurrences'][code_vertex]+=1
+        # count self-appearances
+        elif len(current_codes)==1:
+            code_label = current_codes.pop()
+            code_index = Gcodes.graph_properties['index_of'][code_label]
+            code_vertex = Gcodes.vertex(code_index)
+            Gcodes.vertex_properties['No_of_singleton_occurrences'][code_vertex]+=1
 
     if Gclasses is None:
         Gclasses = gt.Graph(directed=False)
@@ -398,6 +403,8 @@ def load_coocurrence_networks_from_patent_code_file_to_graph_tool(datafile,Gclas
     mygt.add_number_of_singletons_graph_property(Gcodes)
     return Gclasses,Gcodes
 
+
+# IMPORTANT
 def load_coocurrence_networks_from_code_cooc_file_to_graph_tool(datafile,Gclasses = None,Gcodes = None, allow_singletons = True, normalise_weights = True):
     """
     0 'Pat_Type', 1 'Patent', 2 'Class', 3 'Subclass', 4 'N1', 5 'Class2', 6 'subclass2', 7 'N2'
@@ -577,6 +584,8 @@ def load_number_of_patents_per_node_to_graph_tool_for_each_decade_network(decade
         Gclasses.save('Gclasses_' + str(d) + '.xml.gz')
         Gcodes.save('Gcodes_' + str(d) + '.xml.gz')
 
+
+#not important
 def load_number_of_patents_per_node_to_graph_tool_decade_network(Gclasses,Gcodes,d):
     Gclasses.vertex_properties['No_of_patents'] = Gclasses.new_vertex_property('int')
     Gcodes.vertex_properties['No_of_patents'] = Gcodes.new_vertex_property('int')
@@ -613,7 +622,7 @@ def load_number_of_patents_per_node_to_graph_tool_decade_network(Gclasses,Gcodes
             print 'read {0} lines'.format(num_lines)
 
     return Gclasses,Gcodes
-
+#not important
 def load_number_of_occurrences_per_node_to_graph_tool_for_each_decade_network(decades = range(1790,2020,10)):
     for d in decades:
         print '*** Processing activity of the ' + str(d) + 's...'
@@ -621,7 +630,7 @@ def load_number_of_occurrences_per_node_to_graph_tool_for_each_decade_network(de
         print 'File read. Saving graphs...'
         Gclasses.save('Gclasses_' + str(d) + '.xml.gz')
         Gcodes.save('Gcodes_' + str(d) + '.xml.gz')
-
+#not important
 def load_number_of_occurrences_per_node_to_graph_tool_decade_network(d):
     Gclasses = gt.load_graph('Gclasses_' + str(d) + '.xml.gz')
     Gclasses.vertex_properties['No_of_occurrences'] = Gclasses.new_vertex_property('int')
@@ -680,6 +689,7 @@ def load_number_of_occurrences_per_node_to_graph_tool_decade_network(d):
     print 'done.'
     return Gclasses,Gcodes
 
+#not important
 def merge_decade_graphs(start_decade,end_decade,graph_type = 'classes'):
     decade_range = range(start_decade+10,end_decade+10,10)
 
@@ -700,6 +710,7 @@ def merge_decade_graphs(start_decade,end_decade,graph_type = 'classes'):
     print 'Merged graph has {0} nodes and {1} edges'.format(Gmerged.num_vertices(),Gmerged.num_edges())
     return Gmerged
 
+# later
 def read_top_level_decade_community_structures_from_dot_tree_files(file_head,file_tail,decade_range = range(1790,2020,10)):
     COMMs = dict()
     for d in decade_range:
@@ -1397,8 +1408,11 @@ def get_patent_code_incidence_matrix_from_multiple_files(base_filename,decade_ra
     COOarray = numpy.array(AdjList)
 
     K = use_codes*total_codes + (not use_codes)*total_classes
+    data = numpy.ones(COOarray.shape[0])
+    row = COOarray[:,0]
+    col = COOarray[:,1]
     #sparse.coo_matrix((numpy.ones(COOarray.shape[0]),(COOarray[:,0],COOarray[:,1])),(total_patents,K))
-    B = scipy.sparse.coo_matrix(COOarray[:,0],COOarray[:,1],total_patents,K)
+    B = scipy.sparse.coo_matrix((data,(row,col)),shape=(total_patents,K))
     INCIDENCE_MATRIX = mycons.TechnologyMatrix(B,col_elem_labels=tech_lookup)
 
     return INCIDENCE_MATRIX
@@ -1609,9 +1623,11 @@ def count_patents_where_a_two_class_pools_cooccur(class_list_A,class_list_B,data
                 # stop if both found
                 if exists_in_A and exists_in_B:break
 
-            return exists_in_A and exists_in_B
+            return exists_in_A and exists_in_B,exists_in_A,exists_in_B
 
-    NUMBER_OF_RELEVANT_PATENTS = 0
+    NUMBER_OF_COMMON_PATENTS = 0
+    NUMBER_OF_PATENTS_A = 0
+    NUMBER_OF_PATENTS_B = 0
     total_patents = 0
     #datafile = file_header + str(decade) + file_tail
     print 'opening ' + datafile + '...'
@@ -1642,7 +1658,10 @@ def count_patents_where_a_two_class_pools_cooccur(class_list_A,class_list_B,data
                 current_classes.add(current_class_label)
                 #current_codes.add(current_code_label)
             else:
-                NUMBER_OF_RELEVANT_PATENTS += close_patent_batch()
+                res_current_batch = close_patent_batch()
+                NUMBER_OF_COMMON_PATENTS += res_current_batch[0]
+                NUMBER_OF_PATENTS_A += res_current_batch[1]
+                NUMBER_OF_PATENTS_B += res_current_batch[2]
 
                 # re-initialised
                 current_classes = set()
@@ -1657,10 +1676,13 @@ def count_patents_where_a_two_class_pools_cooccur(class_list_A,class_list_B,data
 
         # CLOSE PATENT BATCH FOR THE REMAINING ENTRIES
         if len(current_classes)>0 or len(current_codes)>0:
-            NUMBER_OF_RELEVANT_PATENTS += close_patent_batch()
+            res_current_batch = close_patent_batch()
+            NUMBER_OF_COMMON_PATENTS += res_current_batch[0]
+            NUMBER_OF_PATENTS_A += res_current_batch[1]
+            NUMBER_OF_PATENTS_B += res_current_batch[2]
             total_patents+=1
 
-    return NUMBER_OF_RELEVANT_PATENTS,total_patents
+    return NUMBER_OF_COMMON_PATENTS,NUMBER_OF_PATENTS_A,NUMBER_OF_PATENTS_B,total_patents
 
 def get_network_density_from_two_class_pools(class_list_A,class_list_B,network_file):
     G = gt.load_graph(network_file)
@@ -1746,20 +1768,37 @@ def build_temporal_network_from_coocurrence_history_of_class_pair(classes,decade
 
     return BOMP.TemporalNetwork(TLs)
 
-def get_adjacency_frames_CP_class_groups(decade_range = range(1790,2020,10)):
-    classes_of_era = cpickle.load(open('classes_of_era.cpickle','rb'))
-    N = 5
-    A_FRAMES = dict()
+def get_adjacency_frames_CP_class_groups(classes_of_era = None,decade_range = range(1790,2020,10)):
+    if classes_of_era is None:
+        classes_of_era = cpickle.load(open('classes_of_era.cpickle','rb'))
+
+    N = len(classes_of_era)
+    A_FRAMES = dict() #co occurrences
+    S_FRAMES = dict() #Simple Ratio
+    D_FRAMES = dict() #Dependencies
     for d in decade_range:
         print('Processing decade {0}...'.format(d))
         A_FRAMES[d] = numpy.zeros((N,N),dtype=numpy.int)
+        S_FRAMES[d] = numpy.zeros((N,N))
+        D_FRAMES[d] = numpy.zeros((N,N))
 
         for i in range(0,N-1):
             for j in range(i+1,N):
                 aux = count_patents_where_a_two_class_pools_cooccur(classes_of_era[i],classes_of_era[j],'Patent_files/Patents_v2_{0}.csv'.format(d))
-                A_FRAMES[d][i][j] = aux[0]
+                aij = aux[0]
+                xi = aux[1]
+                xj = aux[2]
 
-    return A_FRAMES
+                if xi==0 or xj==0:continue
+
+                A_FRAMES[d][i][j] = aij
+
+                S_FRAMES[d][i][j] = 1.*aij / (xi + xj - aij)
+
+                D_FRAMES[d][i][j] = 1.*aij / xi
+                D_FRAMES[d][j][i] = 1.*aij / xj
+
+    return A_FRAMES,S_FRAMES,D_FRAMES
 
 def extract_dependency_graph_from_G(Gbase):
     G = gt.Graph(directed=True)
@@ -1799,3 +1838,35 @@ def extract_dependency_graph_from_G(Gbase):
         G.edge_properties['Dependence'][eji] = coocs/xj
 
     return G
+
+def calculate_era_code_dependencies_given_graph(G,number_of_eras = 5):
+    eras_of_classes = cpickle.load(open('eras_of_classes.cpickle','rb'))
+
+    DEPCP = []
+    for n in range(0,number_of_eras):
+        DEPCP.append([])
+        for m in range(0,number_of_eras):
+            DEPCP[n].append([])
+
+    for e in G.edges():
+        i = e.source()
+        j = e.target()
+
+        dij = 1.*G.edge_properties['co_oc'][e] / G.vertex_properties['No_of_occurrences'][i]
+
+        iname = G.vertex_properties['label'][i]
+        jname = G.vertex_properties['label'][j]
+
+        iclass = iname.split('/')[0]
+        jclass = jname.split('/')[0]
+
+        try:
+
+            iclass_index = eras_of_classes[iclass]
+            jclass_index = eras_of_classes[jclass]
+        except KeyError:
+            continue
+
+        DEPCP[iclass_index][jclass_index].append(dij)
+
+    return DEPCP

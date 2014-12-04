@@ -95,19 +95,11 @@ def cross_correlation_similarity(c,max_lag,sigma=1):
     return aux / wsum
 
 def time_series_flatness(X): # normalised entropy of activity
-    T = len(X)
 
-    sumx = 1.*X.nansum()
+    Xn = nan_to_zero(X)
+    sumXn = 1.*numpy.sum(Xn)
 
-    H = 0
-    num_nonans = 0
-    for t in range(0,T):
-        if X[t] is not numpy.nan:
-            num_nonans+=1
-            pi = X[t]/sumx
-            H += -(pi!=0)*(pi*numpy.log(pi))
-
-    return H / numpy.log(num_nonans)
+    return get_entropy(Xn/sumXn)
 
 def isnan(x):
     return x is numpy.nan or math.isnan(x)
@@ -125,7 +117,8 @@ def nan_to_zero(x):
 def get_entropy(p):
     H = 0
     for pi in p:
-        H += -(pi!=0)*(pi*numpy.log(pi))
+        if pi!=0:
+            H += pi*numpy.log(pi)
     return H
 
 def get_normalised_entropy(p):

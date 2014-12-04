@@ -133,7 +133,6 @@ def load_graph_from_pajek(filename,is_directed=False,vertex_label = 'label',weig
                         G.edge_properties[weight_label][e] = int(elems[2])
                     elif weight_type is 'float':
                         G.edge_properties[weight_label][e] = float(elems[2])
-
     return G
 
 def are_indices_consistent_with_labels(G):
@@ -791,7 +790,6 @@ def create_gt_graph_from_sparse_adjacency_matrix(A, is_directed = False, weight_
             e = G.add_edge(i,j)
             if weight_type is not None:
                 G.edge_properties['weight'][e] = v
-
     return G
 
 def has_vertex(G,v_index):
@@ -929,3 +927,48 @@ def get_vertex_by_label(G,vname):
         return G.vertex(G.graph_properties['index_of'][vname])
     else:
         return None
+
+def get_weighted_edge_reciprocity_via_entropy(G,weight):
+    checked_edges = G.new_edge_property('boolean')
+
+
+    A = numpy.zeros(())
+    reciprocity_values = []
+
+    for e in G.edges():
+        # check if there is the mirror edge
+        mirror_e = G.edge(e.target(),e.source())
+        if mirror_e is None:
+            j_weight =.0
+        else:
+            if checked_edges[mirror_e]:
+                continue
+            else:
+                j_weight = 1.*G.edge_properties[weight][mirror_e]
+                checked_edges[mirror_e]
+
+        i_weight = 1.*G.edge_properties[weight][e]
+
+        sum_weights = i_weight + j_weight
+        i_weight_normalised = i_weight / sum_weights
+        j_weight_normalised = j_weight / sum_weights
+
+        entropy = -(i_weight_normalised * numpy.log2(i_weight_normalised) + j_weight_normalised*numpy.log2(j_weight_normalised))
+
+        reciprocity_values.append(entropy)
+
+    return reciprocity_values
+
+def get_edge_filter_not_anscestor_descendent_pair(G,t):
+    ad_filter = G.new_edge_property('boolean')
+
+    for e in G.edges():
+        u = e.source()
+        v = e.target()
+
+        uname = G.vertex_properties['label'][u]
+        vname = G.vertex_properties['label'][v]
+
+        ad_filter[e] = not t.are_ancestor_descendant_pair(uname,vname)
+
+    return ad_filter

@@ -15,14 +15,14 @@ import my_containers as mycons
 import BOMP
 import matplotlib.pylab as pylab
 
-classA = '136'
-classB = '257'
-decade_range = range(1790,2010,10)
-TL = PD.build_temporal_link_from_coocurrence_history_of_class_pair(classA,classB,decade_range,True)
-#print TL.DATA
 
-OUTPUT = TL.learn_all_steps()
-print OUTPUT
+
+
+#AdjList = PD.get_patent_code_incidence_matrix_from_multiple_files('Patent_files/Patents_v2',range(1790,1810,10),True)
+#node_label_list = [None]*len(lookup.keys())
+#for elem in lookup.keys():
+#    node_label_list[lookup[elem]] = elem
+#B = mycons.convert_list_to_sparse_matrix(AdjList)
 
 #test = PD.get_adjacency_frames_CP_class_groups(range(1790,1820,10))
 
