@@ -375,3 +375,14 @@ def convert_property_map_to_community_list(G,pmap):
             comm_labels_lookup[pmap[v]] = aux
 
     return comm_labels_lookup.values()
+
+def convert_community_list_to_property_map(G,list):
+    cmap = G.new_vertex_property('int')
+    counter = 0
+    for c in list:
+        for vlabel in c:
+            v = mygt.get_vertex_by_label(G,vlabel)
+            cmap[v] = counter
+        counter +=1
+    
+    return cmap
