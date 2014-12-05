@@ -604,7 +604,7 @@ def get_fraction_of_interclass_strength_per_node(G,cmap = None, weight = 'co_oc'
     #    inter_class_edge_map = is_edge_interclass_property_map(G,cmap)
 
     N = G.num_vertices()
-    IWF = numpy.zeros(N)
+    IWF = G.new_vertex_property('double')
     i=-1
     for v in G.vertices():
         i+=1
@@ -621,7 +621,7 @@ def get_fraction_of_interclass_strength_per_node(G,cmap = None, weight = 'co_oc'
             if class_v == class_u:
                 inter_class_strength_v += weight_v_u
 
-            IWF[i] = (1.*inter_class_strength_v)/strenght_v
+            IWF[v] = (1.*inter_class_strength_v)/strenght_v
     return IWF
 
 def get_number_of_codes_per_class_in_network(G,cmap=None):
