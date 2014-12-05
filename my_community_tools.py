@@ -218,6 +218,9 @@ def read_bottom_level_community_structure_from_dot_tree_to_gt_property_map(G,fil
 
     return pmap
 
+def read_community_structure_from_dot_map_to_gt_property_map(G,filename):
+    clist = read_community_structure_from_dot_map_to_community_list(filename)
+    return convert_community_list_to_property_map(G,clist)
 
 def read_community_structure_from_dot_map_to_community_list(filename):
     node_labels = []
